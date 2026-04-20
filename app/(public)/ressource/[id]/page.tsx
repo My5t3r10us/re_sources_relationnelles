@@ -17,7 +17,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { db } from "@/db";
-import { resource, user, category, comment } from "@/db/schema";
+import { resource, user, category, comment, commentLike } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { CommentSection } from "./comment-section";
@@ -97,6 +97,15 @@ export default async function RessourcePage({ params }: PageProps) {
     .orderBy(desc(comment.createdAt));
 
   const session = await getServerSession();
+
+  let likedCommentIds: string[] = [];
+  if (session?.user) {
+    const liked = await db
+      .select({ commentId: commentLike.commentId })
+      .from(commentLike)
+      .where(eq(commentLike.userId, session.user.id));
+    likedCommentIds = liked.map((l) => l.commentId);
+  }
 
   const formattedDate = res.createdAt.toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -208,6 +217,7 @@ export default async function RessourcePage({ params }: PageProps) {
         currentUserId={session?.user?.id}
         currentUserName={session?.user?.name}
         currentUserImage={session?.user?.image}
+        likedCommentIds={likedCommentIds}
       />
     </main>
   );

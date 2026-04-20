@@ -15,6 +15,13 @@
       "when": 1776676755658,
       "tag": "0001_dry_silver_samurai",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776690098278,
+      "tag": "0002_melodic_deathbird",
+      "breakpoints": true
     }
   ]
 }

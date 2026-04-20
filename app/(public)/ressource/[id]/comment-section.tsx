@@ -23,6 +23,7 @@ interface CommentSectionProps {
   currentUserId?: string;
   currentUserName?: string;
   currentUserImage?: string | null;
+  likedCommentIds?: string[];
 }
 
 function getInitials(name: string) {
@@ -166,6 +167,7 @@ function CommentItem({
   currentUserId,
   currentUserName,
   currentUserImage,
+  likedCommentIds,
 }: {
   comment: CommentData;
   replies: CommentData[];
@@ -174,11 +176,23 @@ function CommentItem({
   currentUserId?: string;
   currentUserName?: string;
   currentUserImage?: string | null;
+  likedCommentIds: Set<string>;
 }) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [localLiked, setLocalLiked] = useState(likedCommentIds.has(comment.id));
+  const [localLikes, setLocalLikes] = useState(comment.likes);
+  const [replyLikedState, setReplyLikedState] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(replies.map((r) => [r.id, likedCommentIds.has(r.id)]))
+  );
+  const [replyLikesState, setReplyLikesState] = useState<Record<string, number>>(
+    () => Object.fromEntries(replies.map((r) => [r.id, r.likes]))
+  );
 
   function handleLike() {
+    const wasLiked = localLiked;
+    setLocalLiked(!wasLiked);
+    setLocalLikes((prev) => (wasLiked ? Math.max(prev - 1, 0) : prev + 1));
     startTransition(async () => {
       await likeComment(comment.id, resourceId);
     });
@@ -230,10 +244,12 @@ function CommentItem({
           <button
             onClick={handleLike}
             disabled={isPending || !currentUserId}
-            className="flex items-center gap-1 hover:text-primary transition-colors disabled:opacity-50"
+            className={`flex items-center gap-1 transition-colors disabled:opacity-50 ${
+              localLiked ? "text-primary" : "hover:text-primary"
+            }`}
           >
-            <Heart className="w-4 h-4" />
-            {comment.likes > 0 && comment.likes}
+            <Heart className={`w-4 h-4 ${localLiked ? "fill-current" : ""}`} />
+            {localLikes > 0 && localLikes}
           </button>
           {currentUserId && (
             <button
@@ -315,15 +331,23 @@ function CommentItem({
                   <div className="flex items-center gap-4 text-sm text-on-surface-variant mt-1">
                     <button
                       onClick={() => {
+                        const wasLiked = replyLikedState[reply.id];
+                        setReplyLikedState((prev) => ({ ...prev, [reply.id]: !wasLiked }));
+                        setReplyLikesState((prev) => ({
+                          ...prev,
+                          [reply.id]: wasLiked ? Math.max((prev[reply.id] ?? reply.likes) - 1, 0) : (prev[reply.id] ?? reply.likes) + 1,
+                        }));
                         startTransition(async () => {
                           await likeComment(reply.id, resourceId);
                         });
                       }}
                       disabled={isPending || !currentUserId}
-                      className="flex items-center gap-1 hover:text-primary transition-colors disabled:opacity-50"
+                      className={`flex items-center gap-1 transition-colors disabled:opacity-50 ${
+                        replyLikedState[reply.id] ? "text-primary" : "hover:text-primary"
+                      }`}
                     >
-                      <Heart className="w-4 h-4" />
-                      {reply.likes > 0 && reply.likes}
+                      <Heart className={`w-4 h-4 ${replyLikedState[reply.id] ? "fill-current" : ""}`} />
+                      {(replyLikesState[reply.id] ?? reply.likes) > 0 && (replyLikesState[reply.id] ?? reply.likes)}
                     </button>
                   </div>
                 </div>
@@ -343,7 +367,9 @@ export function CommentSection({
   currentUserId,
   currentUserName,
   currentUserImage,
+  likedCommentIds = [],
 }: CommentSectionProps) {
+  const likedSet = new Set(likedCommentIds);
   const topLevelComments = comments.filter((c) => !c.parentId);
   const allReplies = comments.filter((c) => c.parentId);
 
@@ -404,6 +430,7 @@ export function CommentSection({
                 currentUserId={currentUserId}
                 currentUserName={currentUserName}
                 currentUserImage={currentUserImage}
+                likedCommentIds={likedSet}
               />
             );
           })}

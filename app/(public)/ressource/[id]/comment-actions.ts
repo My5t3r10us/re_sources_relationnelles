@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { comment } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { comment, commentLike } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
 
@@ -50,13 +50,37 @@ export async function deleteComment(commentId: string, resourceId: string) {
 }
 
 export async function likeComment(commentId: string, resourceId: string) {
-  await requireAuth();
+  const user = await requireAuth();
 
-  await db
-    .update(comment)
-    .set({ likes: sql`${comment.likes} + 1` })
-    .where(eq(comment.id, commentId));
+  const [existing] = await db
+    .select({ id: commentLike.id })
+    .from(commentLike)
+    .where(
+      and(
+        eq(commentLike.userId, user.id),
+        eq(commentLike.commentId, commentId)
+      )
+    )
+    .limit(1);
+
+  if (existing) {
+    await db.delete(commentLike).where(eq(commentLike.id, existing.id));
+    await db
+      .update(comment)
+      .set({ likes: sql`GREATEST(${comment.likes} - 1, 0)` })
+      .where(eq(comment.id, commentId));
+  } else {
+    await db.insert(commentLike).values({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      commentId,
+    });
+    await db
+      .update(comment)
+      .set({ likes: sql`${comment.likes} + 1` })
+      .where(eq(comment.id, commentId));
+  }
 
   revalidatePath(`/ressource/${resourceId}`);
-  return { success: true };
+  return { success: true, liked: !existing };
 }

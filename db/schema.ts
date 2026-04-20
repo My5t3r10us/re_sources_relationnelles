@@ -196,6 +196,17 @@ export const report = pgTable("report", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const commentLike = pgTable("comment_like", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  commentId: text("comment_id")
+    .notNull()
+    .references(() => comment.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ─── Relations ───
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -220,12 +231,21 @@ export const resourceRelations = relations(resource, ({ one, many }) => ({
   completions: many(completion),
 }));
 
-export const commentRelations = relations(comment, ({ one }) => ({
+export const commentRelations = relations(comment, ({ one, many }) => ({
   resource: one(resource, {
     fields: [comment.resourceId],
     references: [resource.id],
   }),
   author: one(user, { fields: [comment.authorId], references: [user.id] }),
+  likes_rel: many(commentLike),
+}));
+
+export const commentLikeRelations = relations(commentLike, ({ one }) => ({
+  user: one(user, { fields: [commentLike.userId], references: [user.id] }),
+  comment: one(comment, {
+    fields: [commentLike.commentId],
+    references: [comment.id],
+  }),
 }));
 
 export const favoriteRelations = relations(favorite, ({ one }) => ({
