@@ -5,8 +5,6 @@ import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import {
   ArrowLeft,
   Clock,
-  Bookmark,
-  CheckCircle,
   FileText,
   PlayCircle,
   FileDown,
@@ -17,10 +15,11 @@ import {
   Calendar,
 } from "lucide-react";
 import { db } from "@/db";
-import { resource, user, category, comment, commentLike } from "@/db/schema";
+import { resource, user, category, comment, commentLike, favorite, completion } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { CommentSection } from "./comment-section";
+import { FavoriteButton, ReadTracker } from "./resource-client";
 
 const mediaTypeLabels: Record<string, string> = {
   article: "Article",
@@ -99,12 +98,26 @@ export default async function RessourcePage({ params }: PageProps) {
   const session = await getServerSession();
 
   let likedCommentIds: string[] = [];
+  let isFavorite = false;
   if (session?.user) {
-    const liked = await db
-      .select({ commentId: commentLike.commentId })
-      .from(commentLike)
-      .where(eq(commentLike.userId, session.user.id));
+    const [liked, fav] = await Promise.all([
+      db
+        .select({ commentId: commentLike.commentId })
+        .from(commentLike)
+        .where(eq(commentLike.userId, session.user.id)),
+      db
+        .select({ id: favorite.id })
+        .from(favorite)
+        .where(
+          and(
+            eq(favorite.userId, session.user.id),
+            eq(favorite.resourceId, id)
+          )
+        )
+        .limit(1),
+    ]);
     likedCommentIds = liked.map((l) => l.commentId);
+    isFavorite = fav.length > 0;
   }
 
   const formattedDate = res.createdAt.toLocaleDateString("fr-FR", {
@@ -124,6 +137,7 @@ export default async function RessourcePage({ params }: PageProps) {
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-12">
+      <ReadTracker resourceId={res.id} isAuthenticated={!!session?.user} />
       {/* Back */}
       <Link
         href="/catalogue"
@@ -179,14 +193,11 @@ export default async function RessourcePage({ params }: PageProps) {
             </div>
           </div>
           <div className="flex items-center gap-3 ml-auto">
-            <button className="bg-surface-container-highest text-primary rounded-xl px-5 py-2.5 text-sm font-semibold inline-flex items-center gap-2">
-              <Bookmark className="w-4.5 h-4.5" />
-              Ajouter aux favoris
-            </button>
-            <button className="gradient-primary text-on-primary-fixed rounded-xl px-5 py-2.5 text-sm font-semibold inline-flex items-center gap-2">
-              <CheckCircle className="w-4.5 h-4.5" />
-              Marquer comme exploité
-            </button>
+            <FavoriteButton
+              resourceId={res.id}
+              isFavorite={isFavorite}
+              isAuthenticated={!!session?.user}
+            />
           </div>
         </div>
       </div>
