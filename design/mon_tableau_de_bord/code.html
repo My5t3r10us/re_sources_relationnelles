@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Dashboard - (RE)Sources Relationnelles</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed-variant": "#1b6d71",
+                      "tertiary": "#15696d",
+                      "on-primary-container": "#000000",
+                      "secondary": "#4d626c",
+                      "error-container": "#fa746f",
+                      "error": "#a83836",
+                      "primary-container": "#3f78f7",
+                      "on-secondary-container": "#40555f",
+                      "on-primary-fixed-variant": "#f9f7ff",
+                      "on-background": "#2d3335",
+                      "secondary-container": "#cfe6f2",
+                      "surface-variant": "#dee3e6",
+                      "on-primary-fixed": "#ffffff",
+                      "primary-fixed": "#3f78f7",
+                      "on-tertiary-container": "#066266",
+                      "tertiary-fixed": "#b1fbff",
+                      "error-dim": "#67040d",
+                      "surface-container-low": "#f1f4f5",
+                      "outline-variant": "#adb3b5",
+                      "on-error": "#fff7f6",
+                      "tertiary-fixed-dim": "#a3ecf0",
+                      "on-tertiary-fixed": "#004f52",
+                      "primary-fixed-dim": "#2d6ae9",
+                      "surface-tint": "#0356d5",
+                      "on-secondary-fixed-variant": "#495f69",
+                      "surface-container": "#ebeef0",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary": "#f9f8ff",
+                      "primary": "#0356d5",
+                      "tertiary-container": "#b1fbff",
+                      "secondary-fixed": "#cfe6f2",
+                      "inverse-on-surface": "#9b9d9e",
+                      "surface": "#f8f9fa",
+                      "on-surface": "#2d3335",
+                      "on-secondary-fixed": "#2d424c",
+                      "surface-dim": "#d5dbdd",
+                      "surface-bright": "#f8f9fa",
+                      "inverse-surface": "#0c0f10",
+                      "on-tertiary": "#e4feff",
+                      "primary-dim": "#004bbc",
+                      "background": "#f8f9fa",
+                      "surface-container-high": "#e5e9eb",
+                      "surface-container-highest": "#dee3e6",
+                      "secondary-dim": "#415660",
+                      "on-error-container": "#6e0a12",
+                      "outline": "#767c7e",
+                      "tertiary-dim": "#005d61",
+                      "on-surface-variant": "#5a6062",
+                      "secondary-fixed-dim": "#c1d8e4",
+                      "inverse-primary": "#5d8bff",
+                      "on-secondary": "#f2faff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Public Sans"
+                      ],
+                      "body": [
+                              "Public Sans"
+                      ],
+                      "label": [
+                              "Public Sans"
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+            background-color: theme('colors.surface');
+            color: theme('colors.on-surface');
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-slate-50/80 dark:bg-slate-900/85 backdrop-blur-xl docked full-width top-0 sticky bg-slate-100 dark:bg-slate-800 shadow-sm dark:shadow-none flex justify-between items-center px-12 py-4 w-full z-50">
+<div class="flex items-center space-x-8">
+<span class="text-xl font-bold tracking-tighter text-blue-700 dark:text-blue-400">
+                (RE)Sources Relationnelles
+            </span>
+<div class="hidden md:flex items-center space-x-6">
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 font-['Public_Sans'] tracking-tight text-slate-900 dark:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95 transition-transform px-3 py-2 rounded-lg" href="#">Catalog</a>
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 font-['Public_Sans'] tracking-tight text-slate-900 dark:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95 transition-transform px-3 py-2 rounded-lg" href="#">Wellness</a>
+<a class="text-blue-700 dark:text-blue-400 font-semibold border-b-2 border-blue-700 dark:border-blue-400 pb-1 font-['Public_Sans'] tracking-tight text-slate-900 dark:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95 transition-transform px-3" href="#">Community</a>
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 font-['Public_Sans'] tracking-tight text-slate-900 dark:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95 transition-transform px-3 py-2 rounded-lg" href="#">Emergency</a>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<button class="text-blue-700 dark:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 p-2 rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+<button class="text-blue-700 dark:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 p-2 rounded-full active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 p-1 rounded-full active:scale-95 transition-transform">
+<img alt="User profile settings" class="w-8 h-8 rounded-full object-cover" data-alt="close up portrait of a smiling young woman with natural makeup in soft daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmV4AtEEqOEALAddJzNsOX85c0cOtjnSo9FQ770jnVDtDuRUW2Qdgo4LmJbMQO1o1x0EETopnh2O3KfLIuRREAslP7igvLKyuGbIu-EW7u7IkfK_7GamZMxRf1mFqFgn2RAiQdWdJO836XOd_w734wdw4ALe89N94MQL8f325Eh9mAnE03JN1O1TgGjGLNo5SJCH8v1vJVag4lFIrAX3rEdzwsPAtHoEMXvhWnWAWisWTOpb2b8Lf1U6T4WBZ-MugkDN9BH1a93iIs"/>
+</button>
+</div>
+</nav>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-full py-8 bg-slate-100 dark:bg-slate-950 h-screen w-64 border-r-0 tonal shift using bg-slate-100 dark:bg-slate-900 flat no shadows flex-shrink-0">
+<div class="px-8 mb-8">
+<h2 class="text-lg font-bold text-slate-800 dark:text-slate-200 font-['Public_Sans'] text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400">Resource Catalog</h2>
+<p class="text-xs text-slate-500 mt-1">Filter by Category</p>
+</div>
+<nav class="flex-1 space-y-2">
+<a class="flex items-center space-x-3 bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-300 font-bold rounded-l-full ml-4 pl-4 py-3 font-['Public_Sans'] text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="category" data-weight="fill" style="font-variation-settings: 'FILL' 1;">category</span>
+<span>All Resources</span>
+</a>
+<a class="flex items-center space-x-3 text-slate-500 dark:text-slate-400 pl-8 py-3 font-['Public_Sans'] text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span>Anxiety &amp; Stress</span>
+</a>
+<a class="flex items-center space-x-3 text-slate-500 dark:text-slate-400 pl-8 py-3 font-['Public_Sans'] text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="work_history">work_history</span>
+<span>Work-Life Balance</span>
+</a>
+<a class="flex items-center space-x-3 text-slate-500 dark:text-slate-400 pl-8 py-3 font-['Public_Sans'] text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="family_restroom">family_restroom</span>
+<span>Parenting</span>
+</a>
+<a class="flex items-center space-x-3 text-slate-500 dark:text-slate-400 pl-8 py-3 font-['Public_Sans'] text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="emergency">emergency</span>
+<span>Crisis Support</span>
+</a>
+</nav>
+<div class="px-8 mt-auto pt-8">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed rounded-xl py-3 text-sm font-semibold hover:opacity-90 transition-opacity">
+                    Apply Filters
+                </button>
+<div class="mt-6">
+<a class="flex items-center space-x-3 text-slate-500 dark:text-slate-400 pl-4 py-2 font-['Public_Sans'] text-sm uppercase tracking-widest text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Help Center</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto bg-surface-container-low px-4 md:px-12 py-12">
+<div class="max-w-6xl mx-auto space-y-16">
+<!-- Welcome Section -->
+<section class="space-y-4">
+<h1 class="text-[3.5rem] leading-tight font-extrabold tracking-[-0.02em] text-on-surface pt-8">Good morning, Sarah.</h1>
+<p class="text-base text-on-surface-variant max-w-2xl leading-relaxed">Here is your wellness overview for today. You have completed 3 activities this week and have 2 upcoming sessions.</p>
+</section>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+<!-- Progress Card -->
+<div class="col-span-1 md:col-span-8 bg-surface-container-lowest rounded-lg p-8">
+<div class="flex justify-between items-end mb-8">
+<h3 class="text-2xl font-bold tracking-tight">Weekly Progress</h3>
+<button class="text-primary text-sm font-semibold hover:underline">View History</button>
+</div>
+<div class="flex items-center space-x-8">
+<div class="relative w-32 h-32 flex-shrink-0">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-container-high stroke-current" cx="50" cy="50" fill="transparent" r="40" stroke-width="8"></circle>
+<circle class="text-primary stroke-current" cx="50" cy="50" fill="transparent" r="40" stroke-dasharray="251.2" stroke-dashoffset="62.8" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-2xl font-bold">75%</span>
+<span class="text-[0.65rem] uppercase tracking-widest text-on-surface-variant">Goal</span>
+</div>
+</div>
+<div class="space-y-4 flex-1">
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="font-medium">Mindfulness Sessions</span>
+<span class="text-on-surface-variant">3/4</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="font-medium">Reading Materials</span>
+<span class="text-on-surface-variant">1/2</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-2">
+<div class="bg-tertiary h-2 rounded-full" style="width: 50%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Upcoming Session -->
+<div class="col-span-1 md:col-span-4 bg-surface-container-lowest rounded-lg p-8 flex flex-col justify-between">
+<div>
+<span class="bg-secondary-container text-on-secondary-container text-[0.65rem] uppercase tracking-widest px-3 py-1 rounded-full font-bold mb-4 inline-block">Upcoming</span>
+<h3 class="text-xl font-bold tracking-tight mb-2">Group Support Session</h3>
+<p class="text-sm text-on-surface-variant mb-6">Managing Workplace Anxiety</p>
+<div class="flex items-center space-x-3 text-sm text-on-surface-variant mb-2">
+<span class="material-symbols-outlined text-lg" data-icon="calendar_today">calendar_today</span>
+<span>Tomorrow, 14:00 PM</span>
+</div>
+<div class="flex items-center space-x-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-lg" data-icon="videocam">videocam</span>
+<span>Online via Zoom</span>
+</div>
+</div>
+<button class="w-full bg-surface-container-high text-primary rounded-xl py-3 text-sm font-semibold hover:bg-surface-variant transition-colors mt-8">
+                            Join Session
+                        </button>
+</div>
+<!-- Favorite Resources -->
+<div class="col-span-1 md:col-span-12">
+<div class="flex justify-between items-end mb-6 px-2">
+<h3 class="text-2xl font-bold tracking-tight">Saved Resources</h3>
+<button class="text-primary text-sm font-semibold hover:underline">See all</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Resource Card 1 -->
+<div class="bg-surface-container-lowest rounded-lg p-6 group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="w-full h-40 bg-surface-container-high rounded-lg mb-4 overflow-hidden">
+<img alt="Meditation space" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="peaceful bright room with a yoga mat and potted plants in soft morning light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEW2TF5YahEo9lisM56esBW_crBvnbwu8XfQsK8zNRtpnJJKfzC1ulGoiWg4DJcJBhvEsWl8-chS1KrjvyLD-Us-Vnpj8LdvmayJ8gnuuIrgWFbs_OfUeIKstW1du0xFP3leWcz-K64FI4jSmfOivp0tWiJXcpMBUwRcU6mM4Dq7QeDAnGAADtAldd9IDmV9p2n51C4788_r2nMclk80ZFVpl66CoJ0aqvepyfrY-WI7FFlX9XFDYtue7qxFJBAq_81LwzzYPgBYvp"/>
+</div>
+<div class="flex gap-2 mb-3">
+<span class="bg-surface-container text-on-surface-variant text-[0.65rem] uppercase tracking-widest px-2 py-1 rounded-full">Article</span>
+<span class="bg-surface-container text-on-surface-variant text-[0.65rem] uppercase tracking-widest px-2 py-1 rounded-full">Anxiety</span>
+</div>
+<h4 class="text-lg font-bold mb-2">5 Grounding Techniques for Immediate Relief</h4>
+<p class="text-sm text-on-surface-variant line-clamp-2">Learn practical, evidence-based methods to center yourself during moments of high stress or panic.</p>
+</div>
+<!-- Resource Card 2 -->
+<div class="bg-surface-container-lowest rounded-lg p-6 group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="w-full h-40 bg-surface-container-high rounded-lg mb-4 overflow-hidden flex items-center justify-center bg-tertiary-container text-on-tertiary-container">
+<span class="material-symbols-outlined text-4xl" data-icon="headphones">headphones</span>
+</div>
+<div class="flex gap-2 mb-3">
+<span class="bg-surface-container text-on-surface-variant text-[0.65rem] uppercase tracking-widest px-2 py-1 rounded-full">Audio</span>
+<span class="bg-surface-container text-on-surface-variant text-[0.65rem] uppercase tracking-widest px-2 py-1 rounded-full">Sleep</span>
+</div>
+<h4 class="text-lg font-bold mb-2">Guided Sleep Meditation: Deep Rest</h4>
+<p class="text-sm text-on-surface-variant line-clamp-2">A 20-minute guided practice designed to help you disconnect from daily stressors and transition into restful sleep.</p>
+</div>
+<!-- Resource Card 3 -->
+<div class="bg-surface-container-lowest rounded-lg p-6 group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="w-full h-40 bg-surface-container-high rounded-lg mb-4 overflow-hidden">
+<img alt="Group discussion" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="diverse group of people sitting in a circle discussing in a bright modern office space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvLs-U_HCqUC2d3GcCAzVXMUSYTDf43zH1OOqTb11WskjP1Sc9MsAWef9Kb0agXQzIwwob-KFmcwOjT2QitNUyivyaxJfnNr-xMeO8icaiZjZUQjxRS2C8-c3mORoLZMihkvAGImf6gwBoanDkKL-rdYBKcEiyZ8yX5qugY7RmfqvH2rDQHwgjzv8Q4bjnQCNR2bLm1-Uva70aICklZEKxdRTzt9CAn0yZmdF_1_mc-uNzWRlFPVoKlR94E2lHgg3E8XKmnURCW5ql"/>
+</div>
+<div class="flex gap-2 mb-3">
+<span class="bg-surface-container text-on-surface-variant text-[0.65rem] uppercase tracking-widest px-2 py-1 rounded-full">Workshop</span>
+<span class="bg-surface-container text-on-surface-variant text-[0.65rem] uppercase tracking-widest px-2 py-1 rounded-full">Work</span>
+</div>
+<h4 class="text-lg font-bold mb-2">Building Boundaries at Work</h4>
+<p class="text-sm text-on-surface-variant line-clamp-2">Interactive session on how to professionally set limits and protect your personal time without feeling guilty.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer -->
+<footer class="bg-slate-100 dark:bg-slate-950 w-full py-12 px-12 border-t-0 tonal contrast with primary canvas flat flex flex-col md:flex-row justify-between items-center w-full max-w-7xl mx-auto mt-auto">
+<div class="hidden text-xl font-bold tracking-tighter text-blue-700 dark:text-blue-400">
+            (RE)Sources Relationnelles
+        </div>
+<div class="text-center md:text-left mb-6 md:mb-0">
+<p class="font-['Public_Sans'] text-xs text-slate-500 dark:text-slate-400 text-blue-700 dark:text-blue-400">© 2024 (RE)Sources Relationnelles. An official government health initiative.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-6">
+<a class="font-['Public_Sans'] text-xs text-slate-500 dark:text-slate-400 text-blue-700 dark:text-blue-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Legal Mentions</a>
+<a class="font-['Public_Sans'] text-xs text-slate-500 dark:text-slate-400 text-blue-700 dark:text-blue-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Accessibility Statement</a>
+<a class="font-['Public_Sans'] text-xs text-slate-500 dark:text-slate-400 text-blue-700 dark:text-blue-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Data Privacy</a>
+<a class="font-['Public_Sans'] text-xs text-slate-500 dark:text-slate-400 text-blue-700 dark:text-blue-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Contact Support</a>
+</div>
+</footer>
+</body></html>

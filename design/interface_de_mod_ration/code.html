@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Moderation Interface - (RE)Sources Relationnelles</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#1b6d71",
+                        "tertiary": "#15696d",
+                        "on-primary-container": "#000000",
+                        "secondary": "#4d626c",
+                        "error-container": "#fa746f",
+                        "error": "#a83836",
+                        "primary-container": "#3f78f7",
+                        "on-secondary-container": "#40555f",
+                        "on-primary-fixed-variant": "#f9f7ff",
+                        "on-background": "#2d3335",
+                        "secondary-container": "#cfe6f2",
+                        "surface-variant": "#dee3e6",
+                        "on-primary-fixed": "#ffffff",
+                        "primary-fixed": "#3f78f7",
+                        "on-tertiary-container": "#066266",
+                        "tertiary-fixed": "#b1fbff",
+                        "error-dim": "#67040d",
+                        "surface-container-low": "#f1f4f5",
+                        "outline-variant": "#adb3b5",
+                        "on-error": "#fff7f6",
+                        "tertiary-fixed-dim": "#a3ecf0",
+                        "on-tertiary-fixed": "#004f52",
+                        "primary-fixed-dim": "#2d6ae9",
+                        "surface-tint": "#0356d5",
+                        "on-secondary-fixed-variant": "#495f69",
+                        "surface-container": "#ebeef0",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#f9f8ff",
+                        "primary": "#0356d5",
+                        "tertiary-container": "#b1fbff",
+                        "secondary-fixed": "#cfe6f2",
+                        "inverse-on-surface": "#9b9d9e",
+                        "surface": "#f8f9fa",
+                        "on-surface": "#2d3335",
+                        "on-secondary-fixed": "#2d424c",
+                        "surface-dim": "#d5dbdd",
+                        "surface-bright": "#f8f9fa",
+                        "inverse-surface": "#0c0f10",
+                        "on-tertiary": "#e4feff",
+                        "primary-dim": "#004bbc",
+                        "background": "#f8f9fa",
+                        "surface-container-high": "#e5e9eb",
+                        "surface-container-highest": "#dee3e6",
+                        "secondary-dim": "#415660",
+                        "on-error-container": "#6e0a12",
+                        "outline": "#767c7e",
+                        "tertiary-dim": "#005d61",
+                        "on-surface-variant": "#5a6062",
+                        "secondary-fixed-dim": "#c1d8e4",
+                        "inverse-primary": "#5d8bff",
+                        "on-secondary": "#f2faff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Public Sans"],
+                        "body": ["Public Sans"],
+                        "label": ["Public Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            margin: 0;
+            padding: 0;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .text-shadow-ambient {
+            text-shadow: 0 2px 10px rgba(45, 51, 53, 0.1);
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-body-lg bg-surface antialiased">
+<!-- SideNavBar -->
+<nav class="h-screen w-64 fixed left-0 top-0 overflow-y-auto tonal-layering bg-slate-50 dark:bg-slate-900 no-shadows flex flex-col p-6 gap-y-8 z-40">
+<div class="flex items-center gap-4 px-2">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+</div>
+<div>
+<h1 class="text-lg font-black uppercase tracking-widest text-slate-900 dark:text-slate-100 leading-tight">Admin Panel</h1>
+<p class="text-xs text-secondary tracking-wide uppercase">The Serene Authority</p>
+</div>
+</div>
+<button class="w-full py-3 px-4 rounded-xl bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed shadow-sm hover:opacity-90 transition-opacity font-semibold flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add</span>
+            New Resource
+        </button>
+<div class="flex-grow flex flex-col gap-2 font-['Public_Sans'] text-sm tracking-wide">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-300 scale-95 active:scale-100 transition-transform" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>Statistics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 rounded-lg shadow-sm font-semibold scale-95 active:scale-100 transition-transform" href="#">
+<span class="material-symbols-outlined filled-icon">gavel</span>
+<span>Moderation</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-300 scale-95 active:scale-100 transition-transform" href="#">
+<span class="material-symbols-outlined">library_books</span>
+<span>Catalog Management</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-300 scale-95 active:scale-100 transition-transform" href="#">
+<span class="material-symbols-outlined">group</span>
+<span>User Accounts</span>
+</a>
+</div>
+<div class="flex flex-col gap-2 font-['Public_Sans'] text-sm tracking-wide pt-4 border-t-0 shadow-[0_-1px_0_rgba(173,179,181,0.2)]">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-300 scale-95 active:scale-100 transition-transform" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-300 scale-95 active:scale-100 transition-transform" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span>Logs</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex-1 flex flex-col h-screen overflow-hidden bg-surface relative">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-8 py-4 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-xl docked full-width top-0 sticky z-50 no-border shadow-none bg-slate-100/50 dark:bg-slate-800/50 shadow-sm dark:shadow-none font-['Public_Sans'] antialiased tracking-tight">
+<div class="flex items-center gap-6 flex-1">
+<div class="text-xl font-bold tracking-tighter text-blue-700 dark:text-blue-400">
+                    (RE)Sources Admin
+                </div>
+<div class="relative w-96 hidden md:block group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface-container-high border-none rounded-full py-2.5 pl-12 pr-4 text-sm text-on-surface focus:ring-0 focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(3,86,213,0.2)] transition-all placeholder-on-surface-variant" placeholder="Search moderation queue..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:bg-surface-container-high transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-surface-container-lowest shadow-sm ml-2">
+<img alt="Administrator Profile" class="w-full h-full object-cover" data-alt="Professional headshot of a mature administrative leader in a well-lit office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQQ2qx-EWO409j8RYYNs83fUx5gUnryLpbPlqEiEwPIDF-V1dFN-ZYlFuUOrWW9VL0sEZ2A6WdbdaX07Qhzro1myT1FYawXnha_zQYXOSfU1HIYmyly-2VK0x5qAoSezrZOBWqITErhE4LJQ7_gXumF20XRhycW0dCpYaJkq_VRgI25cDCTYxGhNAEel_tGfOr1Iew1H1W7cek9P1cwHX636wU_msKE1b1TiOU7Imvy6J8Kf9wRHnhE3O9rIkYMOIImH96MaSJNheM"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto px-8 py-10 pt-24 -mt-20">
+<div class="max-w-6xl mx-auto space-y-12">
+<header class="flex justify-between items-end mb-8 pt-4">
+<div>
+<h2 class="text-display-lg font-headline font-bold tracking-tight text-on-surface leading-tight">Moderation Queue</h2>
+<p class="text-body-lg text-secondary mt-2 max-w-2xl">Review flagged content and pending resources to maintain the integrity of the (RE)Sources Relationnelles ecosystem.</p>
+</div>
+<div class="flex gap-4">
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-highest text-primary rounded-xl hover:bg-surface-variant transition-colors font-medium">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                            Filter
+                        </button>
+</div>
+</header>
+<section class="bg-surface-container-low rounded-[2rem] p-8 pb-12">
+<div class="flex justify-between items-center mb-8 px-2">
+<h3 class="text-headline-lg font-headline font-semibold text-on-surface tracking-tight">Requires Attention</h3>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-surface-container-lowest text-secondary rounded-full text-label-md font-bold tracking-widest uppercase">12 Pending</span>
+<span class="px-3 py-1 bg-error-container/20 text-error rounded-full text-label-md font-bold tracking-widest uppercase">3 Flagged</span>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+<!-- Item 1: Flagged Comment -->
+<article class="bg-surface-container-lowest rounded-xl p-6 relative group transition-all hover:shadow-[0_10px_30px_rgba(45,51,53,0.06)] flex flex-col justify-between min-h-[280px]">
+<div class="absolute top-6 right-6 px-3 py-1 bg-error-container/10 text-error rounded-full text-label-md font-bold tracking-widest uppercase flex items-center gap-1.5 border border-error/20">
+<span class="material-symbols-outlined text-[14px]">flag</span>
+                                Flagged
+                            </div>
+<div class="mb-6 pr-24">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-secondary text-sm font-medium">JD</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Jean Dupont</p>
+<p class="text-xs text-secondary">Comment on "Coping with Burnout"</p>
+</div>
+</div>
+<h4 class="text-title-md font-bold text-on-surface mb-3 line-clamp-1">Inappropriate Content Report</h4>
+<div class="p-4 bg-surface-container rounded-lg border border-outline-variant/30 text-on-surface-variant text-sm italic leading-relaxed">
+                                    "This resource is completely useless and the author clearly has no idea what they are talking about. Don't waste your time."
+                                </div>
+<p class="text-xs text-error mt-3 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                                    Flagged by 4 users for: Harassment/Toxicity
+                                </p>
+</div>
+<div class="flex justify-end gap-3 mt-auto pt-6 border-t border-surface-container-high">
+<button class="px-5 py-2 text-primary hover:underline underline-offset-4 decoration-primary/30 font-medium text-sm transition-all">Ignore Report</button>
+<button class="px-5 py-2 bg-error text-on-error rounded-xl shadow-sm hover:opacity-90 font-medium text-sm flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                                    Delete Comment
+                                </button>
+</div>
+</article>
+<!-- Item 2: Pending Resource -->
+<article class="bg-surface-container-lowest rounded-xl p-6 relative group transition-all hover:shadow-[0_10px_30px_rgba(45,51,53,0.06)] flex flex-col justify-between min-h-[280px]">
+<div class="absolute top-6 right-6 px-3 py-1 bg-secondary-container/50 text-on-secondary-container rounded-full text-label-md font-bold tracking-widest uppercase flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">pending</span>
+                                Pending Review
+                            </div>
+<div class="mb-6 pr-32">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-full bg-tertiary-container flex items-center justify-center text-on-tertiary-container text-sm font-medium">ML</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Marie Laurent</p>
+<p class="text-xs text-secondary">Submitted 2 hours ago</p>
+</div>
+</div>
+<h4 class="text-title-md font-bold text-on-surface mb-2">Guide to Workplace Mediation Techniques</h4>
+<p class="text-body-md text-on-surface-variant line-clamp-2 leading-relaxed mb-4">
+                                    A comprehensive framework for HR professionals and team leads to resolve interpersonal conflicts before they escalate into formal complaints.
+                                </p>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded text-xs font-medium">PDF Article</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded text-xs font-medium">Conflict Resolution</span>
+</div>
+</div>
+<div class="flex justify-end gap-3 mt-auto pt-6 border-t border-surface-container-high">
+<button class="px-5 py-2 text-primary hover:underline underline-offset-4 decoration-primary/30 font-medium text-sm transition-all">View Details</button>
+<button class="px-5 py-2 bg-surface-container-highest text-error rounded-xl hover:bg-error-container/20 font-medium text-sm transition-all">Reject</button>
+<button class="px-5 py-2 bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed rounded-xl shadow-sm hover:opacity-90 font-medium text-sm flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                                    Approve
+                                </button>
+</div>
+</article>
+<!-- Item 3: Pending Resource -->
+<article class="bg-surface-container-lowest rounded-xl p-6 relative group transition-all hover:shadow-[0_10px_30px_rgba(45,51,53,0.06)] flex flex-col justify-between min-h-[280px]">
+<div class="absolute top-6 right-6 px-3 py-1 bg-secondary-container/50 text-on-secondary-container rounded-full text-label-md font-bold tracking-widest uppercase flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">pending</span>
+                                Pending Review
+                            </div>
+<div class="mb-6 pr-32">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-secondary text-sm font-medium">AB</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Alain Bernard</p>
+<p class="text-xs text-secondary">Submitted 5 hours ago</p>
+</div>
+</div>
+<h4 class="text-title-md font-bold text-on-surface mb-2">Weekly Mindfulness Exercises for Civil Servants</h4>
+<p class="text-body-md text-on-surface-variant line-clamp-2 leading-relaxed mb-4">
+                                    Short, 5-minute audio guides designed to be practiced at the desk during high-stress periods or between difficult citizen interactions.
+                                </p>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded text-xs font-medium">Audio Series</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded text-xs font-medium">Mental Health</span>
+</div>
+</div>
+<div class="flex justify-end gap-3 mt-auto pt-6 border-t border-surface-container-high">
+<button class="px-5 py-2 text-primary hover:underline underline-offset-4 decoration-primary/30 font-medium text-sm transition-all">View Details</button>
+<button class="px-5 py-2 bg-surface-container-highest text-error rounded-xl hover:bg-error-container/20 font-medium text-sm transition-all">Reject</button>
+<button class="px-5 py-2 bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed rounded-xl shadow-sm hover:opacity-90 font-medium text-sm flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                                    Approve
+                                </button>
+</div>
+</article>
+<!-- Item 4: Flagged Resource -->
+<article class="bg-surface-container-lowest rounded-xl p-6 relative group transition-all hover:shadow-[0_10px_30px_rgba(45,51,53,0.06)] flex flex-col justify-between min-h-[280px]">
+<div class="absolute top-6 right-6 px-3 py-1 bg-error-container/10 text-error rounded-full text-label-md font-bold tracking-widest uppercase flex items-center gap-1.5 border border-error/20">
+<span class="material-symbols-outlined text-[14px]">flag</span>
+                                Flagged
+                            </div>
+<div class="mb-6 pr-24">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-secondary text-sm font-medium">SYS</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">System Auto-Flag</p>
+<p class="text-xs text-secondary">Detected 1 day ago</p>
+</div>
+</div>
+<h4 class="text-title-md font-bold text-on-surface mb-2">Overcoming Depression Quickly</h4>
+<p class="text-body-md text-on-surface-variant line-clamp-2 leading-relaxed mb-3">
+                                    An unverified medical advice document that claims to offer immediate solutions outside of standard psychological practices.
+                                </p>
+<p class="text-xs text-error mt-2 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">policy</span>
+                                    Violation: Unverified Medical Claims / Potential Harm
+                                </p>
+</div>
+<div class="flex justify-end gap-3 mt-auto pt-6 border-t border-surface-container-high">
+<button class="px-5 py-2 text-primary hover:underline underline-offset-4 decoration-primary/30 font-medium text-sm transition-all">Review Content</button>
+<button class="px-5 py-2 bg-error text-on-error rounded-xl shadow-sm hover:opacity-90 font-medium text-sm flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+                                    Unpublish Resource
+                                </button>
+</div>
+</article>
+</div>
+</section>
+<!-- Load More / Pagination Hint -->
+<div class="flex justify-center pb-24">
+<button class="px-8 py-3 bg-surface-container-highest text-primary rounded-xl hover:bg-surface-variant transition-colors font-semibold tracking-wide">
+                        Load More Items
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

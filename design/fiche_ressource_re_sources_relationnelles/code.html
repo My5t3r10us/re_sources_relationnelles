@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Resource Detail - (RE)Sources Relationnelles</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed-variant": "#1b6d71",
+                      "tertiary": "#15696d",
+                      "on-primary-container": "#000000",
+                      "secondary": "#4d626c",
+                      "error-container": "#fa746f",
+                      "error": "#a83836",
+                      "primary-container": "#3f78f7",
+                      "on-secondary-container": "#40555f",
+                      "on-primary-fixed-variant": "#f9f7ff",
+                      "on-background": "#2d3335",
+                      "secondary-container": "#cfe6f2",
+                      "surface-variant": "#dee3e6",
+                      "on-primary-fixed": "#ffffff",
+                      "primary-fixed": "#3f78f7",
+                      "on-tertiary-container": "#066266",
+                      "tertiary-fixed": "#b1fbff",
+                      "error-dim": "#67040d",
+                      "surface-container-low": "#f1f4f5",
+                      "outline-variant": "#adb3b5",
+                      "on-error": "#fff7f6",
+                      "tertiary-fixed-dim": "#a3ecf0",
+                      "on-tertiary-fixed": "#004f52",
+                      "primary-fixed-dim": "#2d6ae9",
+                      "surface-tint": "#0356d5",
+                      "on-secondary-fixed-variant": "#495f69",
+                      "surface-container": "#ebeef0",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary": "#f9f8ff",
+                      "primary": "#0356d5",
+                      "tertiary-container": "#b1fbff",
+                      "secondary-fixed": "#cfe6f2",
+                      "inverse-on-surface": "#9b9d9e",
+                      "surface": "#f8f9fa",
+                      "on-surface": "#2d3335",
+                      "on-secondary-fixed": "#2d424c",
+                      "surface-dim": "#d5dbdd",
+                      "surface-bright": "#f8f9fa",
+                      "inverse-surface": "#0c0f10",
+                      "on-tertiary": "#e4feff",
+                      "primary-dim": "#004bbc",
+                      "background": "#f8f9fa",
+                      "surface-container-high": "#e5e9eb",
+                      "surface-container-highest": "#dee3e6",
+                      "secondary-dim": "#415660",
+                      "on-error-container": "#6e0a12",
+                      "outline": "#767c7e",
+                      "tertiary-dim": "#005d61",
+                      "on-surface-variant": "#5a6062",
+                      "secondary-fixed-dim": "#c1d8e4",
+                      "inverse-primary": "#5d8bff",
+                      "on-secondary": "#f2faff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Public Sans"
+                      ],
+                      "body": [
+                              "Public Sans"
+                      ],
+                      "label": [
+                              "Public Sans"
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+      </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col antialiased">
+<!-- TopNavBar (Shared Component) -->
+<nav class="bg-slate-50/80 dark:bg-slate-900/85 backdrop-blur-xl docked full-width top-0 sticky shadow-sm dark:shadow-none z-50">
+<div class="flex justify-between items-center px-12 py-4 w-full border-b border-transparent bg-slate-100 dark:bg-slate-800">
+<!-- Brand -->
+<div class="text-xl font-bold tracking-tighter text-blue-700 dark:text-blue-400 font-['Public_Sans']">
+                (RE)Sources Relationnelles
+            </div>
+<!-- Navigation Links -->
+<div class="hidden md:flex items-center gap-8 font-['Public_Sans'] tracking-tight text-slate-900 dark:text-slate-100">
+<!-- Active Item -->
+<a class="text-blue-700 dark:text-blue-400 font-semibold border-b-2 border-blue-700 dark:border-blue-400 pb-1 active:scale-95 transition-transform hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 px-2 rounded-t-sm" href="#">
+                    Catalog
+                </a>
+<!-- Inactive Items -->
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 px-2 py-1 rounded active:scale-95 transition-transform" href="#">
+                    Wellness
+                </a>
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 px-2 py-1 rounded active:scale-95 transition-transform" href="#">
+                    Community
+                </a>
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 px-2 py-1 rounded active:scale-95 transition-transform" href="#">
+                    Emergency
+                </a>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<button class="text-slate-600 dark:text-slate-400 hover:text-blue-600 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 p-2 rounded-full active:scale-95 transition-transform flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden hover:opacity-90 transition-opacity flex-shrink-0">
+<img alt="User profile settings" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOM18_9QuLuQj9ut4DUCCyHsDK6QcBP0ESZk8Spm0BQek-hzaZXbEaa2F7jT8IygfzGq4fONDTu3MWfKFEaVBZcgy9zlzIjef7bZv_oZukKrKyAuHFFcjiwzHVZlwVR9-I8nSR6oVrhrKcq6K83GcuH9DCMPrmnKNmEJWZk8HXvQ1zMZIT3LoF5x5psO38jNNWXRQSXKlzVmQ1XzHO16G9i_P02jonyOftb2PkpaTWyA4NsBPP1i4vvyKDWuUhQml3qdZdP1uublC_"/>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-4xl mx-auto px-6 py-12 md:py-16">
+<!-- Context / Back -->
+<div class="mb-10">
+<button class="group flex items-center gap-2 text-primary font-body text-sm font-medium hover:underline transition-all">
+<span class="material-symbols-outlined text-lg transition-transform group-hover:-translate-x-1">arrow_back</span>
+                Back to Catalog
+            </button>
+</div>
+<!-- Article Header -->
+<header class="mb-12">
+<div class="flex flex-wrap items-center gap-3 mb-6">
+<span class="bg-surface-container-high text-on-surface-variant font-label text-xs uppercase tracking-[0.05em] px-3 py-1.5 rounded-full font-semibold">
+                    Anxiety &amp; Stress
+                </span>
+<span class="text-on-surface-variant font-body text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">schedule</span> 8 min read
+                </span>
+</div>
+<h1 class="font-headline text-4xl md:text-5xl font-extrabold text-on-surface tracking-tight leading-tight mb-8">
+                Navigating Workplace Burnout: A Practical Guide to Recovery
+            </h1>
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-surface-container-lowest p-6 rounded-xl">
+<!-- Author Info -->
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0">
+<img alt="Dr. Sarah Jenkins smiling in a bright clinic setting" class="w-full h-full object-cover" data-alt="Portrait of a female therapist in her 40s smiling softly in a well-lit modern office with plants in the background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIwIf-qbYSYioKycf35UbIqctV4Xmx4RKSd3Nmt6rE_qrpp3_NtyIPYO3Dl9F78JIkdAK48Ou62Owug6ZVezh7JgexDjPKb9__oaJtOFLku_DIsjmGrMeKRBr2gwCn4ELxzovuR4mj8ggix9Fnaicse2LMIOEcbx3MG8MEx1Pk1efYcWv5M36HbMCwa2rm9TVSmkDYqG3M3Z79BtZ3Nul86m8zqTSiUv6eeFJCKEyyyPrA59HF6RUBECekTAXixQhNCE3dUESczkAd"/>
+</div>
+<div>
+<div class="font-body font-semibold text-on-surface">Dr. Sarah Jenkins</div>
+<div class="font-body text-sm text-on-surface-variant">Clinical Psychologist</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 bg-surface-container-highest text-primary font-body font-medium px-5 py-2.5 rounded-xl hover:bg-surface-variant transition-colors shadow-[0_2px_10px_rgba(45,51,53,0.02)]">
+<span class="material-symbols-outlined">bookmark</span>
+                        Add to Favorites
+                    </button>
+<button class="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed font-body font-medium px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity shadow-[0_4px_15px_rgba(3,86,213,0.2)]">
+<span class="material-symbols-outlined fill">check_circle</span>
+                        Mark as Completed
+                    </button>
+</div>
+</div>
+</header>
+<!-- Media Hero -->
+<div class="mb-16 rounded-xl overflow-hidden bg-surface-container-low aspect-video relative">
+<img alt="Person writing in journal next to laptop and coffee" class="w-full h-full object-cover" data-alt="A clean modern wooden desk from above, featuring a closed laptop, a ceramic cup of coffee, and a person's hands writing in a minimalist notebook with a sleek pen, soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyxqLQXVJZfXghN1cH1wG1r5FP08UuRQftTtUPDV6ByLPMKY5i2xSP7yCkKYNsCqccHujr7HBCVKtb-h701gDg_hLZKx5lt5eZWdeHx52a98CCoskLH1lGtufDZIs3Bqt2_KVwLuTvlzPyqbRVOJW3GsoynnWp0BA-s4ffYKmrKmh2kqa98q-mkuRlbyqF1PJnsMviReXxq4aR4B3X8X_zPWQkWxLgp56s6vpS_2CFWQiUlUiLk2tNzNROLrTkcMKpjMm-pD4NJ020"/>
+</div>
+<!-- Article Body -->
+<article class="prose prose-lg prose-slate max-w-none font-body text-on-surface leading-relaxed space-y-8 mb-20">
+<p class="text-xl text-on-surface-variant leading-relaxed">
+                Burnout is more than just feeling tired after a long week. It's a state of emotional, physical, and mental exhaustion caused by excessive and prolonged stress. It occurs when you feel overwhelmed, emotionally drained, and unable to meet constant demands.
+            </p>
+<h2 class="font-headline text-2xl font-bold text-on-surface mt-12 mb-4 tracking-tight">Recognizing the Early Signs</h2>
+<p>
+                Often, we ignore the subtle signals our bodies and minds send us. The journey to recovery begins with acknowledgment. If you find yourself increasingly cynical about your job, lacking the energy to be consistently productive, or feeling a sense of dread when waking up, these are not just "bad days"—they are indicators of a systemic issue.
+            </p>
+<div class="bg-surface-container-low p-8 rounded-xl my-10 pl-10 relative">
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-tertiary rounded-l-xl"></div>
+<p class="italic text-on-surface-variant font-medium text-lg m-0">
+                    "Recovery is not about bouncing back to the way things were. It's about building a new, more sustainable way of living and working."
+                </p>
+</div>
+<h2 class="font-headline text-2xl font-bold text-on-surface mt-12 mb-4 tracking-tight">Actionable Steps for Today</h2>
+<p>
+                While deep recovery takes time, there are immediate interventions that can stabilize your daily experience. Creating strict boundaries between "work time" and "personal time" is paramount. This means disabling notifications, physically closing your workspace if possible, and engaging in transition rituals.
+            </p>
+<ul class="list-none space-y-4 my-8 pl-0">
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-tertiary mt-1">done</span>
+<span><strong>Implement a Hard Stop:</strong> Choose a specific time to end your workday and stick to it relentlessly.</span>
+</li>
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-tertiary mt-1">done</span>
+<span><strong>Micro-Restorations:</strong> Take 5-minute sensory breaks away from screens every 90 minutes.</span>
+</li>
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-tertiary mt-1">done</span>
+<span><strong>Delegate or Drop:</strong> Audit your current tasks and identify at least one that can be delayed or delegated.</span>
+</li>
+</ul>
+</article>
+<!-- Moderated Comment Section -->
+<section class="bg-surface-container-low rounded-[1rem] p-8 md:p-12">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline text-2xl font-bold text-on-surface tracking-tight">Community Discussion</h3>
+<span class="bg-surface-container-highest text-on-surface-variant text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">Moderated</span>
+</div>
+<!-- Comment Input -->
+<div class="bg-surface-container-lowest p-6 rounded-xl mb-10 shadow-[0_10px_30px_rgba(45,51,53,0.03)]">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0">
+<img alt="Current user" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB89G5BRDM8hbQFToo_62JRPdzt8hvL240i-7oHSxj0zPhhhoBFLG5UfUXlt_ENVHzP2auy_ve4OfZAUhzLc4pd-0I3V0wgMJwOUN8TFtXjSh2DtDNMIM8kaN8jkmki6uKvIFvn-553jdFJkDG77zAhXMva5SdGgGXta4hEB8Llr1rthH1wW3V5x1O-pLvFmPqKxI0czjO2B5-uVcYWWKBHODKOjJO7x3Vw81b1djwR70tndAzZqLnojWkUnlQXSQrtJpzv1Nt7BfIJ"/>
+</div>
+<div class="flex-grow">
+<textarea class="w-full bg-surface-container-high border-none rounded-xl p-4 text-on-surface font-body resize-none focus:ring-0 focus:bg-surface-container-lowest focus:outline focus:outline-2 focus:outline-primary/20 transition-all min-h-[100px]" placeholder="Share your experience or ask a question..."></textarea>
+<div class="flex justify-end mt-4">
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary-fixed font-body font-medium px-6 py-2 rounded-xl hover:opacity-90 transition-opacity">
+                                Post Comment
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Comment List -->
+<div class="space-y-8">
+<!-- Single Comment -->
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0">
+<img alt="Alex M" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_kNHnbmsBWL1v7ecX8Pp2HeIWW92BAMjlKlgJRgg4ZIRr4UDnj-OSgNoJ6sP_rDqjj_y9-XvgBTDMxTX_i1mFMO_syTq2_87jCN3cgPg9FtGXM3vW7t1VyChz2hWD7r_VxyQ9qkyr6vv82ONcNR4maS7z4qXemOfhSmZdRLI-h0q6YGraJpKE02gJVpjKKFd-k2mMr5AhoknZx9GVWaHCh7p77-waKjwACas7RR1OqSQ3-9b_cvH84_moU7UFW6BYf2Swu11-atGJ"/>
+</div>
+<div>
+<div class="bg-surface-container-lowest p-5 rounded-xl rounded-tl-none shadow-[0_5px_20px_rgba(45,51,53,0.02)]">
+<div class="flex items-center justify-between mb-2">
+<span class="font-body font-semibold text-on-surface">Alex M.</span>
+<span class="font-body text-xs text-on-surface-variant">2 hours ago</span>
+</div>
+<p class="font-body text-on-surface-variant leading-relaxed">
+                                The point about "micro-restorations" really resonated with me. I usually power through the whole day without looking up from my screen, and by 5 PM I'm completely drained. Going to try the 90-minute rule tomorrow.
+                            </p>
+</div>
+<div class="flex items-center gap-4 mt-2 ml-2">
+<button class="flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">favorite</span> 12
+                            </button>
+<button class="text-sm text-on-surface-variant hover:text-primary transition-colors font-medium">
+                                Reply
+                            </button>
+</div>
+</div>
+</div>
+<!-- Single Comment (Reply) -->
+<div class="flex gap-4 ml-14">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0">
+<img alt="Dr. Sarah Jenkins" class="w-full h-full object-cover" data-alt="Portrait of a female therapist in her 40s smiling softly" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1E6iORvH4sobNN6R3zvo8ltVgTH9XFTwQacBgk2eFtVWmmL_ub1i3lW1fGsPXgWjgxmXe7nx3vYSrqeciKB3rqppCEptbzV8C41MJp3vNUyg7XI5maty0Y4DGNsVdgwuZP8Tib27oSvpgH9lA088kotW7TBwoYY4LxoZE-qsEVlWM7vWLNF5FjpRAFDs4TN9pA5cLIWZeR__Ka_KLDGDUu-T-q7bCbb0lbEVQglM64dH8WU3q1pdU1FlzOban5hHQ4qtj6Md5V-Lx"/>
+</div>
+<div>
+<div class="bg-surface-container-lowest p-5 rounded-xl rounded-tl-none shadow-[0_5px_20px_rgba(45,51,53,0.02)] border-l-2 border-primary">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2">
+<span class="font-body font-semibold text-on-surface">Dr. Sarah Jenkins</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold">Author</span>
+</div>
+<span class="font-body text-xs text-on-surface-variant">1 hour ago</span>
+</div>
+<p class="font-body text-on-surface-variant leading-relaxed">
+                                That's wonderful to hear, Alex. Start small—even just closing your eyes and taking five deep breaths counts as a restoration. Let us know how it goes!
+                            </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="bg-slate-100 dark:bg-slate-950 w-full py-12 px-12 border-t-0 mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center w-full max-w-7xl mx-auto">
+<p class="font-['Public_Sans'] text-xs text-slate-500 dark:text-slate-400 mb-6 md:mb-0 text-center md:text-left">
+                © 2024 (RE)Sources Relationnelles. An official government health initiative.
+            </p>
+<div class="flex flex-wrap justify-center gap-6 font-['Public_Sans'] text-xs">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Legal Mentions</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Accessibility Statement</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Data Privacy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Contact Support</a>
+</div>
+</div>
+</footer>
+</body></html>

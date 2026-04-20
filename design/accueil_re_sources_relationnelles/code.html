@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>(RE)Sources Relationnelles - Landing Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#1b6d71",
+                        "tertiary": "#15696d",
+                        "on-primary-container": "#000000",
+                        "secondary": "#4d626c",
+                        "error-container": "#fa746f",
+                        "error": "#a83836",
+                        "primary-container": "#3f78f7",
+                        "on-secondary-container": "#40555f",
+                        "on-primary-fixed-variant": "#f9f7ff",
+                        "on-background": "#2d3335",
+                        "secondary-container": "#cfe6f2",
+                        "surface-variant": "#dee3e6",
+                        "on-primary-fixed": "#ffffff",
+                        "primary-fixed": "#3f78f7",
+                        "on-tertiary-container": "#066266",
+                        "tertiary-fixed": "#b1fbff",
+                        "error-dim": "#67040d",
+                        "surface-container-low": "#f1f4f5",
+                        "outline-variant": "#adb3b5",
+                        "on-error": "#fff7f6",
+                        "tertiary-fixed-dim": "#a3ecf0",
+                        "on-tertiary-fixed": "#004f52",
+                        "primary-fixed-dim": "#2d6ae9",
+                        "surface-tint": "#0356d5",
+                        "on-secondary-fixed-variant": "#495f69",
+                        "surface-container": "#ebeef0",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#f9f8ff",
+                        "primary": "#0356d5",
+                        "tertiary-container": "#b1fbff",
+                        "secondary-fixed": "#cfe6f2",
+                        "inverse-on-surface": "#9b9d9e",
+                        "surface": "#f8f9fa",
+                        "on-surface": "#2d3335",
+                        "on-secondary-fixed": "#2d424c",
+                        "surface-dim": "#d5dbdd",
+                        "surface-bright": "#f8f9fa",
+                        "inverse-surface": "#0c0f10",
+                        "on-tertiary": "#e4feff",
+                        "primary-dim": "#004bbc",
+                        "background": "#f8f9fa",
+                        "surface-container-high": "#e5e9eb",
+                        "surface-container-highest": "#dee3e6",
+                        "secondary-dim": "#415660",
+                        "on-error-container": "#6e0a12",
+                        "outline": "#767c7e",
+                        "tertiary-dim": "#005d61",
+                        "on-surface-variant": "#5a6062",
+                        "secondary-fixed-dim": "#c1d8e4",
+                        "inverse-primary": "#5d8bff",
+                        "on-secondary": "#f2faff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Public Sans", "sans-serif"],
+                        "body": ["Public Sans", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .gradient-primary {
+                @apply bg-gradient-to-br from-primary to-primary-container;
+            }
+            .shadow-ambient {
+                box-shadow: 0 10px 30px rgba(45, 51, 53, 0.06);
+            }
+            .ghost-border {
+                @apply border-2 border-primary/20;
+            }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<nav class="docked full-width top-0 sticky bg-slate-50/80 dark:bg-slate-900/85 backdrop-blur-xl shadow-sm dark:shadow-none z-50 transition-all duration-200">
+<div class="flex justify-between items-center px-12 py-4 w-full">
+<div class="text-xl font-bold tracking-tighter text-blue-700 dark:text-blue-400">
+                (RE)Sources Relationnelles
+            </div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-blue-700 dark:text-blue-400 font-semibold border-b-2 border-blue-700 dark:border-blue-400 pb-1 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95" href="#">Catalog</a>
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95" href="#">Wellness</a>
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95" href="#">Community</a>
+<a class="text-slate-600 dark:text-slate-400 font-medium hover:text-blue-600 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95" href="#">Emergency</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:block relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="bg-surface-container-high border-none rounded-xl py-2 pl-10 pr-4 text-body-lg focus:bg-surface-container-lowest focus:ghost-border focus:ring-0 transition-all w-64 placeholder-on-surface-variant text-on-surface" placeholder="Search resources..." type="text"/>
+</div>
+<button class="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-200 active:scale-95 text-blue-700 dark:text-blue-400">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent hover:border-primary transition-all">
+<img alt="User profile settings" class="w-full h-full object-cover" data-alt="Portrait of a relaxed person smiling softly in bright, natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNQqJqtC6ayUsIA9A3UP7kuXPvf6i8h-t0H3mvqX0rUAtQo8WCakEgsdtnfQKPtVjeaJYc39QJXoic4eNCj3BhB8S5W6ONsCCophxwuQFFfVdv10wImZmJYiXcKjFvGts4c5SiGpZ2pdQjsY4O8cYF_mhDjlixbM1ewRGeQhvn4a7Y48UZ4So2mQ5c7OoHgp-6jqyS-yEDkcFWRAPbS-wjko_kbEKFEcYqri7oDEe3EHnYFND6Tbx8_RTzwL_OOFgxVSDxp26yyyl_"/>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col items-center">
+<!-- Hero Section -->
+<section class="w-full max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col md:flex-row items-center gap-16">
+<div class="flex-1 space-y-8 relative z-10">
+<h1 class="font-headline text-[3.5rem] leading-[1.1] tracking-[-0.02em] font-extrabold text-on-surface">
+                    Your Collaborative Network for <span class="text-primary">Social Wellness</span>
+</h1>
+<p class="font-body text-body-lg text-on-surface-variant max-w-xl leading-relaxed text-lg">
+                    Discover, share, and connect through a curated platform designed to strengthen community resilience and foster meaningful relational health.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4 pt-4">
+<button class="gradient-primary text-on-primary-fixed rounded-xl px-8 py-4 font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-ambient">
+                        Explore Catalog
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+<button class="bg-surface-container-highest text-primary rounded-xl px-8 py-4 font-semibold text-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+                        Join the Community
+                    </button>
+</div>
+</div>
+<div class="flex-1 w-full relative">
+<!-- Bento Grid Layout for Hero Images -->
+<div class="grid grid-cols-2 gap-4 h-[500px]">
+<div class="col-span-1 row-span-2 rounded-[2rem] overflow-hidden bg-surface-container-low shadow-ambient relative">
+<img alt="Community support group" class="w-full h-full object-cover" data-alt="Diverse group of adults sitting in a circle outdoors, engaged in calm, supportive conversation on a sunny day" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpzHUHybVU-q5aIITdWK083ltorXMKxFKY2XFMlymHI1gZN-ZLYQRqdppAqaHWv-wqZOE8ROyQjx3OBLkLV--PyrbyCfCx1a0qwXs4J_zElubxznrZSyHi4auqSXJB3RaanXKfnArZGXZP5LhEqRzFNvAbkLbDsEJ55QC12P8l3Cgp9KVa8b7HNE1_Q0BlxEIMHi4ZI8L2BEej24eevHIoRKC8zMKwLwtlWpCZ0cLqRR8dRqLDGjPfiw1PNE2cQamgC-ArZS1oCWDQ"/>
+</div>
+<div class="col-span-1 row-span-1 rounded-[1.5rem] overflow-hidden bg-surface-container-low shadow-ambient relative">
+<img alt="Mentorship session" class="w-full h-full object-cover" data-alt="Two professional women discussing notes at a bright modern café table, conveying mentorship and connection" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuWcKmf1xvNQM_6RsUXevjv2eBpwiCxekOA2w3WBfMvEdvEJT_LMseR-ViRsrWbP9JSTd90jVozbM8zrG7p62z0aerQbZtTw9N1SiipIXDpey-c4gsFpWdujqgx3BSxY1TiGjw0fw7MPtfvclbElw0Q0IosB9FhNUImSlFfHrdynqIxZA1MLt2mm8ZoIffOnQ880gQdHoDMHvzH_fSISXpzY9hZ-0X8nXugrnc9vAqNtYxmzTw2QgyZZ1bRO8Ob79ra1H1dLXJSPbY"/>
+</div>
+<div class="col-span-1 row-span-1 rounded-[1.5rem] overflow-hidden bg-surface-container-lowest p-6 shadow-ambient flex flex-col justify-between">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-primary mb-4">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xl text-on-surface mb-1">Active Network</h3>
+<p class="font-body text-sm text-on-surface-variant">2,450+ resources shared by experts and community members.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Global Search Section (Prominent) -->
+<section class="w-full bg-surface-container-low py-20 px-6">
+<div class="max-w-4xl mx-auto flex flex-col items-center text-center space-y-8">
+<h2 class="font-headline text-[2rem] tracking-tight font-bold text-on-surface">Find the Support You Need</h2>
+<div class="w-full relative shadow-ambient rounded-2xl bg-surface-container-lowest p-2 flex items-center">
+<span class="material-symbols-outlined text-outline ml-4 mr-2 text-2xl">search</span>
+<input class="flex-grow bg-transparent border-none py-4 text-body-lg focus:ring-0 placeholder-on-surface-variant text-on-surface h-full" placeholder="Search by topic, keyword, or resource type..." type="text"/>
+<button class="gradient-primary text-on-primary-fixed rounded-xl px-8 py-3 font-semibold hover:opacity-90 transition-opacity ml-2 h-full">
+                        Search
+                    </button>
+</div>
+<div class="flex flex-wrap justify-center gap-3">
+<span class="font-label text-xs uppercase tracking-widest text-on-surface-variant mt-2 mr-2">Popular:</span>
+<span class="bg-surface-container-lowest text-on-surface text-sm px-4 py-2 rounded-full cursor-pointer hover:bg-surface-variant transition-colors shadow-sm">Anxiety &amp; Stress</span>
+<span class="bg-surface-container-lowest text-on-surface text-sm px-4 py-2 rounded-full cursor-pointer hover:bg-surface-variant transition-colors shadow-sm">Work-Life Balance</span>
+<span class="bg-surface-container-lowest text-on-surface text-sm px-4 py-2 rounded-full cursor-pointer hover:bg-surface-variant transition-colors shadow-sm">Parenting</span>
+</div>
+</div>
+</section>
+<!-- Featured Resources Section -->
+<section class="w-full max-w-7xl mx-auto px-6 py-24 space-y-12">
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline text-[2rem] tracking-tight font-bold text-on-surface mb-2">Featured Resources</h2>
+<p class="font-body text-on-surface-variant text-lg">Curated guides and tools for relational wellbeing.</p>
+</div>
+<button class="text-primary font-semibold hover:underline flex items-center gap-1 transition-all">
+                    View all <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Resource Card 1 -->
+<div class="bg-surface-container-lowest rounded-lg shadow-ambient overflow-hidden flex flex-col h-full group hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
+<div class="h-48 overflow-hidden relative">
+<img alt="Person meditating" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Person sitting in lotus position meditating in a bright, minimalist room with natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7cPNDAEF18LNM397Ftb5LEJH2xLwOa5zD8woak3MBEpEJGWYuJrGVMUDCqYfhOR-ruSZwhFJT5uD6iHK42gwdGNocXTpsDQoRI4bzOH2vFj3oFvx-gaj38HQ7NlfCUJpj8BDMla1N8fhdnb5R7yPhUtNhJVLZw8ch2YkIVKwAFKNx8O-OoZsl0p_Xjn3bOlsTvZ4FbxHphdo4F7Wah6XhyCgkGuVB_NMl9sEOgkBetBi5mfg4OoANf8lkWTumwMiRw5k8zOe5Xa_i"/>
+<div class="absolute top-4 left-4 bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-label uppercase tracking-widest text-primary font-semibold">
+                            Guide
+                        </div>
+</div>
+<div class="p-6 flex flex-col flex-grow gap-4">
+<div>
+<h3 class="font-headline font-bold text-xl text-on-surface mb-2 line-clamp-2">Navigating Workplace Anxiety: A Practical Toolkit</h3>
+<p class="font-body text-on-surface-variant text-sm line-clamp-3 leading-relaxed">Actionable strategies for managing stress in professional environments, created in collaboration with occupational therapists.</p>
+</div>
+<div class="mt-auto pt-4 border-t border-transparent flex items-center justify-between text-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">timer</span> 15 min read</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">bookmark_border</span> Save</span>
+</div>
+</div>
+</div>
+<!-- Resource Card 2 -->
+<div class="bg-surface-container-lowest rounded-lg shadow-ambient overflow-hidden flex flex-col h-full group hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
+<div class="h-48 overflow-hidden relative">
+<img alt="Family playing together" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A father and young daughter playing board games on a living room floor, bathed in warm afternoon sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgL6-DzE2YUphdbycgnv2wP8tGgrvslnD8EBJHATDwEr1v-2guQ0v2WY5a8oKyw54tEDL8CR9yWQzpK4NkJsR7NK7tsdxdJifZmmYb-bGgrsUQhtJuAj474AmeoGVGn2qvgzBmr4VQ28ZGmRvGzCgZJOYB6O3mgY2US6T2zFKlD7RJyRbB51RTxXBFH2T-QY158rR1dnRXhBwjuQ6JbI8-I8q7vA2EFXAnS50bt3Bmhu5yMGWIsuQTSSkhyBorlyXpqT4i_LszlMgv"/>
+<div class="absolute top-4 left-4 bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-label uppercase tracking-widest text-tertiary font-semibold">
+                            Interactive Course
+                        </div>
+</div>
+<div class="p-6 flex flex-col flex-grow gap-4">
+<div>
+<h3 class="font-headline font-bold text-xl text-on-surface mb-2 line-clamp-2">Building Resilient Family Dynamics</h3>
+<p class="font-body text-on-surface-variant text-sm line-clamp-3 leading-relaxed">A module-based approach to fostering open communication and emotional security within the family unit.</p>
+</div>
+<div class="mt-auto pt-4 flex items-center justify-between text-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">play_circle</span> 4 Modules</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">bookmark_border</span> Save</span>
+</div>
+</div>
+</div>
+<!-- Resource Card 3 -->
+<div class="bg-surface-container-lowest rounded-lg shadow-ambient overflow-hidden flex flex-col h-full group hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
+<div class="h-48 overflow-hidden relative bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-6xl text-on-secondary-container opacity-50">headset_mic</span>
+<div class="absolute top-4 left-4 bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-label uppercase tracking-widest text-secondary font-semibold">
+                            Podcast
+                        </div>
+</div>
+<div class="p-6 flex flex-col flex-grow gap-4">
+<div>
+<h3 class="font-headline font-bold text-xl text-on-surface mb-2 line-clamp-2">The Architecture of Empathy: Ep. 4</h3>
+<p class="font-body text-on-surface-variant text-sm line-clamp-3 leading-relaxed">Dr. Elena Rostova discusses the neurological underpinnings of empathy and how to cultivate it in daily interactions.</p>
+</div>
+<div class="mt-auto pt-4 flex items-center justify-between text-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">headphones</span> 45 min listen</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">bookmark_border</span> Save</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-12 px-12 border-t-0 bg-slate-100 dark:bg-slate-950 mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center w-full max-w-7xl mx-auto text-center md:text-left gap-6">
+<p class="font-['Public_Sans'] text-xs text-slate-500 dark:text-slate-400">
+                © 2024 (RE)Sources Relationnelles. An official government health initiative.
+            </p>
+<div class="flex flex-wrap justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
+<a class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Legal Mentions</a>
+<a class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Accessibility Statement</a>
+<a class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Data Privacy</a>
+<a class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Contact Support</a>
+</div>
+</div>
+</footer>
+</body></html>
