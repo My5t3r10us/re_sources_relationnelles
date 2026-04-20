@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, BarChart3, Gavel, Library, Users, HelpCircle, ScrollText } from "lucide-react";
+import { Plus, BarChart3, Gavel, Users, HelpCircle } from "lucide-react";
 
 const adminNav = [
   { href: "/admin/statistiques", label: "Statistiques", icon: <BarChart3 className="w-5 h-5" /> },
   { href: "/admin/moderation", label: "Modération", icon: <Gavel className="w-5 h-5" /> },
-  { href: "/admin/catalogue", label: "Gestion du catalogue", icon: <Library className="w-5 h-5" /> },
   { href: "/admin/utilisateurs", label: "Comptes utilisateurs", icon: <Users className="w-5 h-5" /> },
 ];
 
@@ -67,13 +66,6 @@ export function SidebarAdmin() {
         >
           <HelpCircle className="w-5 h-5" />
           Support
-        </Link>
-        <Link
-          href="/admin/logs"
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-lowest/50 transition-colors"
-        >
-          <ScrollText className="w-5 h-5" />
-          Journaux
         </Link>
       </div>
     </aside>

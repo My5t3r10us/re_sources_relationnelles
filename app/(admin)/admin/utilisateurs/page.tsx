@@ -1,36 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Filter, Download, Pencil, Ban, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { db } from "@/db";
+import { user } from "@/db/schema";
+import { eq, count, desc, ilike, and, SQL } from "drizzle-orm";
+import Link from "next/link";
+import { UserActions } from "./user-actions";
 
-const users = [
-  {
-    id: "1",
-    name: "Sarah Jenkins",
-    email: "sarah.j@example.com",
-    role: "admin" as const,
-    status: "active" as const,
-    lastLogin: "Dernière connexion : il y a 2h",
-    avatar: null,
-  },
-  {
-    id: "2",
-    name: "Marcus Chen",
-    email: "m.chen@example.com",
-    role: "moderator" as const,
-    status: "active" as const,
-    lastLogin: "Dernière connexion : il y a 1j",
-    initials: "MC",
-  },
-  {
-    id: "3",
-    name: "David Miller",
-    email: "d.miller@example.com",
-    role: "citizen" as const,
-    status: "deactivated" as const,
-    lastLogin: "Désactivé le : 12 oct.",
-    avatar: null,
-  },
-];
+const ITEMS_PER_PAGE = 10;
 
 const roleConfig = {
   admin: { label: "Admin", variant: "primary" as const },
@@ -43,7 +20,58 @@ const statusConfig = {
   deactivated: { label: "Désactivé", variant: "error" as const },
 };
 
-export default function UtilisateursPage() {
+interface PageProps {
+  searchParams: Promise<{
+    role?: string;
+    page?: string;
+    q?: string;
+  }>;
+}
+
+export default async function UtilisateursPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const roleFilter = params.role ?? "";
+  const search = params.q ?? "";
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+
+  // Build conditions
+  const conditions: SQL[] = [];
+  if (roleFilter && ["admin", "moderator", "citizen"].includes(roleFilter)) {
+    conditions.push(eq(user.role, roleFilter as "admin" | "moderator" | "citizen"));
+  }
+  if (search) {
+    conditions.push(ilike(user.name, `%${search}%`));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [users, [{ total }]] = await Promise.all([
+    db
+      .select()
+      .from(user)
+      .where(whereClause)
+      .orderBy(desc(user.createdAt))
+      .limit(ITEMS_PER_PAGE)
+      .offset((page - 1) * ITEMS_PER_PAGE),
+    db.select({ total: count() }).from(user).where(whereClause),
+  ]);
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const start = (page - 1) * ITEMS_PER_PAGE + 1;
+  const end = Math.min(page * ITEMS_PER_PAGE, total);
+
+  function buildUrl(params: Record<string, string>) {
+    const sp = new URLSearchParams(params);
+    return `/admin/utilisateurs?${sp.toString()}`;
+  }
+
+  const roleFilters = [
+    { value: "", label: "Tous" },
+    { value: "admin", label: "Admin" },
+    { value: "moderator", label: "Modérateur" },
+    { value: "citizen", label: "Citoyen" },
+  ];
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       {/* Header */}
@@ -61,119 +89,136 @@ export default function UtilisateursPage() {
           <span className="text-label-md text-on-surface-variant mr-3">
             Filtrer par rôle
           </span>
-          {["Tous", "Admin", "Modérateur", "Citoyen"].map((filter, i) => (
-            <button
-              key={filter}
+          {roleFilters.map((filter) => (
+            <Link
+              key={filter.value}
+              href={buildUrl({ ...(filter.value ? { role: filter.value } : {}), ...(search ? { q: search } : {}) })}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                i === 0
+                roleFilter === filter.value
                   ? "bg-primary text-on-primary-fixed"
                   : "text-on-surface-variant hover:bg-surface-container-high"
               }`}
             >
-              {filter}
-            </button>
+              {filter.label}
+            </Link>
           ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm">
-            <Filter className="w-4 h-4" />
-            Plus de filtres
-          </Button>
-          <Button variant="secondary" size="sm">
-            <Download className="w-4 h-4" />
-            Exporter
-          </Button>
         </div>
       </div>
 
       {/* User list */}
       <div className="space-y-3 mb-8">
-        {users.map((user) => (
-          <div
-            key={user.id}
-            className={`group bg-surface-container-lowest rounded-xl p-5 shadow-ambient-sm hover:shadow-ambient transition-all flex items-center gap-4 ${
-              user.status === "deactivated" ? "opacity-60" : ""
-            }`}
-          >
-            {/* Avatar */}
-            <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                user.status === "deactivated"
-                  ? "bg-surface-container-high text-on-surface-variant grayscale"
-                  : "bg-surface-container-high text-on-surface"
-              }`}
-            >
-              {user.initials ||
-                user.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-on-surface">{user.name}</p>
-              <p className="text-sm text-on-surface-variant truncate">
-                {user.email}
-              </p>
-            </div>
-
-            {/* Role badge */}
-            <Badge variant={roleConfig[user.role].variant} dot>
-              {roleConfig[user.role].label}
-            </Badge>
-
-            {/* Status */}
-            <div className="text-right min-w-[140px]">
-              <Badge variant={statusConfig[user.status].variant}>
-                {statusConfig[user.status].label}
-              </Badge>
-              <p className="text-xs text-on-surface-variant mt-1">
-                {user.lastLogin}
-              </p>
-            </div>
-
-            {/* Hover actions */}
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-colors"
-                aria-label="Modifier"
-              >
-                <Pencil className="w-5 h-5" />
-              </button>
-              <button
-                className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/5 transition-colors"
-                aria-label="Bloquer"
-              >
-                <Ban className="w-5 h-5" />
-              </button>
-            </div>
+        {users.length === 0 ? (
+          <div className="bg-surface-container-lowest rounded-xl p-12 text-center shadow-ambient-sm">
+            <p className="text-on-surface-variant">Aucun utilisateur trouvé.</p>
           </div>
-        ))}
+        ) : (
+          users.map((u) => {
+            const initials = u.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2);
+            const status = u.active ? "active" : "deactivated";
+            return (
+              <div
+                key={u.id}
+                className={`group bg-surface-container-lowest rounded-xl p-5 shadow-ambient-sm hover:shadow-ambient transition-all flex items-center gap-4 ${
+                  !u.active ? "opacity-60" : ""
+                }`}
+              >
+                {/* Avatar */}
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                    !u.active
+                      ? "bg-surface-container-high text-on-surface-variant grayscale"
+                      : "bg-surface-container-high text-on-surface"
+                  }`}
+                >
+                  {initials}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-on-surface">{u.name}</p>
+                  <p className="text-sm text-on-surface-variant truncate">
+                    {u.email}
+                  </p>
+                </div>
+
+                {/* Role badge */}
+                <Badge variant={roleConfig[u.role].variant} dot>
+                  {roleConfig[u.role].label}
+                </Badge>
+
+                {/* Status */}
+                <div className="text-right min-w-[140px]">
+                  <Badge variant={statusConfig[status].variant}>
+                    {statusConfig[status].label}
+                  </Badge>
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Inscrit le {u.createdAt.toLocaleDateString("fr-FR")}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <UserActions userId={u.id} currentRole={u.role} isActive={u.active} />
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-on-surface-variant">
-          Affichage <strong>1</strong> à <strong>10</strong> sur{" "}
-          <strong>245</strong> utilisateurs
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 transition-colors"
-            disabled
-            aria-label="Précédent"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high transition-colors"
-            aria-label="Suivant"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+      {total > ITEMS_PER_PAGE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-on-surface-variant">
+            {start} à {end} sur {total} utilisateurs
+          </p>
+          <div className="flex items-center gap-2">
+            {page > 1 ? (
+              <Link
+                href={buildUrl({
+                  page: String(page - 1),
+                  ...(roleFilter ? { role: roleFilter } : {}),
+                  ...(search ? { q: search } : {}),
+                })}
+              >
+                <Button variant="secondary" size="sm">
+                  <ChevronLeft className="w-4 h-4" />
+                  Précédent
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="secondary" size="sm" disabled>
+                <ChevronLeft className="w-4 h-4" />
+                Précédent
+              </Button>
+            )}
+            {page < totalPages ? (
+              <Link
+                href={buildUrl({
+                  page: String(page + 1),
+                  ...(roleFilter ? { role: roleFilter } : {}),
+                  ...(search ? { q: search } : {}),
+                })}
+              >
+                <Button variant="secondary" size="sm">
+                  Suivant
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="secondary" size="sm" disabled>
+                Suivant
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

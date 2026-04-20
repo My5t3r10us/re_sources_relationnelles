@@ -34,7 +34,7 @@ export default function RegisterPage() {
       },
       {
         onSuccess: () => {
-          router.push("/");
+          router.push("/tableau-de-bord");
         },
         onError: (ctx) => {
           setError(ctx.error.message);

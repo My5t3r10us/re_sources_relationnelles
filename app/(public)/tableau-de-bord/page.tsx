@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SidebarCatalog } from "@/components/layout/sidebar-catalog";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Video } from "lucide-react";
 
@@ -30,7 +29,6 @@ const savedResources = [
 export default function TableauDeBordPage() {
   return (
     <div className="flex min-h-screen">
-      <SidebarCatalog />
       <main className="flex-1 bg-surface-container-low">
         <div className="max-w-6xl mx-auto px-6 py-12">
           {/* Welcome */}

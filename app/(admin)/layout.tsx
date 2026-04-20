@@ -1,12 +1,28 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { SidebarAdmin } from "@/components/layout/sidebar-admin";
 import { Search, Bell, Settings } from "lucide-react";
+import { getServerSession } from "@/lib/auth-server";
+import { db } from "@/db";
+import { user } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession();
+  if (!session?.user) redirect("/login?callbackUrl=/admin/statistiques");
+
+  const [dbUser] = await db
+    .select({ role: user.role })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+    .limit(1);
+
+  if (!dbUser || dbUser.role !== "admin") redirect("/");
+
   return (
     <div className="flex h-screen overflow-hidden">
       <SidebarAdmin />

@@ -1,38 +1,71 @@
 import { Card } from "@/components/ui/card";
 import { Eye, PlusCircle, Users, TrendingUp, Download } from "lucide-react";
+import { db } from "@/db";
+import { user, resource, category, comment, report } from "@/db/schema";
+import { eq, count, sum, sql } from "drizzle-orm";
 
-const metrics = [
-  {
-    label: "Consultations",
-    value: "124 592",
-    trend: "+12,4% vs période précédente",
-    icon: <Eye className="w-5 h-5 text-primary" />,
-    trendUp: true,
-  },
-  {
-    label: "Créations",
-    value: "8 405",
-    trend: "+5,2% vs période précédente",
-    icon: <PlusCircle className="w-5 h-5 text-primary" />,
-    trendUp: true,
-  },
-  {
-    label: "Utilisateurs actifs",
-    value: "45 112",
-    trend: "→ Stable",
-    icon: <Users className="w-5 h-5 text-primary" />,
-    trendUp: false,
-  },
-];
+export default async function StatistiquesPage() {
+  // Parallel DB queries
+  const [
+    [{ totalUsers }],
+    [{ totalResources }],
+    [{ totalViews }],
+    [{ pendingResources }],
+    [{ publishedResources }],
+    [{ totalReports }],
+    [{ unresolvedReports }],
+    [{ totalComments }],
+    categoryStats,
+    roleStats,
+  ] = await Promise.all([
+    db.select({ totalUsers: count() }).from(user),
+    db.select({ totalResources: count() }).from(resource),
+    db.select({ totalViews: sum(resource.viewCount) }).from(resource),
+    db.select({ pendingResources: count() }).from(resource).where(eq(resource.status, "pending")),
+    db.select({ publishedResources: count() }).from(resource).where(eq(resource.status, "published")),
+    db.select({ totalReports: count() }).from(report),
+    db.select({ unresolvedReports: count() }).from(report).where(eq(report.resolved, false)),
+    db.select({ totalComments: count() }).from(comment),
+    db
+      .select({ name: category.name, count: count() })
+      .from(resource)
+      .innerJoin(category, eq(resource.categoryId, category.id))
+      .where(eq(resource.status, "published"))
+      .groupBy(category.name)
+      .orderBy(sql`count(*) desc`),
+    db
+      .select({ role: user.role, count: count() })
+      .from(user)
+      .groupBy(user.role),
+  ]);
 
-const categoryDistribution = [
-  { name: "Santé mentale", percentage: 45 },
-  { name: "Famille", percentage: 30 },
-  { name: "Nutrition", percentage: 15 },
-  { name: "Kinésithérapie", percentage: 10 },
-];
+  const views = Number(totalViews) || 0;
+  const maxCategoryStat = categoryStats.length > 0 ? Math.max(...categoryStats.map((c) => c.count)) : 1;
 
-export default function StatistiquesPage() {
+  const metrics = [
+    {
+      label: "Consultations totales",
+      value: views.toLocaleString("fr-FR"),
+      trend: `${publishedResources} ressources publiées`,
+      icon: <Eye className="w-5 h-5 text-primary" />,
+      trendUp: true,
+    },
+    {
+      label: "Ressources créées",
+      value: totalResources.toLocaleString("fr-FR"),
+      trend: `${pendingResources} en attente de modération`,
+      icon: <PlusCircle className="w-5 h-5 text-primary" />,
+      trendUp: pendingResources > 0,
+    },
+    {
+      label: "Utilisateurs inscrits",
+      value: totalUsers.toLocaleString("fr-FR"),
+      trend: roleStats.map((r) => `${r.count} ${r.role}`).join(", "),
+      icon: <Users className="w-5 h-5 text-primary" />,
+      trendUp: false,
+    },
+  ];
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       {/* Header */}
@@ -44,23 +77,6 @@ export default function StatistiquesPage() {
         et des taux de création de ressources. Les données sont mises à jour en
         temps réel.
       </p>
-
-      {/* Filters */}
-      <div className="flex items-center gap-4 mb-8">
-        <span className="text-label-md text-on-surface-variant">Filtres</span>
-        <select className="bg-surface-container-high rounded-xl px-4 py-2.5 text-sm text-on-surface border-none focus:outline-none focus:ring-2 focus:ring-primary/20">
-          <option>30 derniers jours</option>
-          <option>7 derniers jours</option>
-          <option>3 derniers mois</option>
-          <option>12 derniers mois</option>
-        </select>
-        <select className="bg-surface-container-high rounded-xl px-4 py-2.5 text-sm text-on-surface border-none focus:outline-none focus:ring-2 focus:ring-primary/20">
-          <option>Toutes les régions</option>
-          <option>Île-de-France</option>
-          <option>Auvergne-Rhône-Alpes</option>
-          <option>Provence-Alpes-Côte d&apos;Azur</option>
-        </select>
-      </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -89,60 +105,67 @@ export default function StatistiquesPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        {/* Consultation Trends */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-10">
+        {/* Summary stats */}
         <Card className="md:col-span-3 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-headline-md text-on-surface">
-              Tendances de consultation
-            </h2>
-            <button className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline">
-              Exporter
-              <Download className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-sm text-on-surface-variant mb-6">
-            Volume quotidien de vues de ressources toutes catégories confondues.
-          </p>
-          {/* Chart placeholder */}
-          <div className="h-48 flex items-end gap-1">
-            {[40, 55, 35, 65, 50, 70, 60, 80, 45, 75, 65, 85, 55, 90, 70, 80, 60, 95, 75, 85].map(
-              (h, i) => (
-                <div
-                  key={i}
-                  className="flex-1 bg-primary/20 rounded-t-sm hover:bg-primary/40 transition-colors"
-                  style={{ height: `${h}%` }}
-                />
-              )
-            )}
+          <h2 className="text-headline-md text-on-surface mb-6">
+            Résumé de la plateforme
+          </h2>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-surface-container-low rounded-xl p-4">
+              <p className="text-sm text-on-surface-variant mb-1">Commentaires</p>
+              <p className="text-2xl font-bold text-on-surface">{totalComments}</p>
+            </div>
+            <div className="bg-surface-container-low rounded-xl p-4">
+              <p className="text-sm text-on-surface-variant mb-1">Signalements</p>
+              <p className="text-2xl font-bold text-on-surface">{totalReports}</p>
+              {unresolvedReports > 0 && (
+                <p className="text-xs text-error mt-1">{unresolvedReports} non résolus</p>
+              )}
+            </div>
+            <div className="bg-surface-container-low rounded-xl p-4">
+              <p className="text-sm text-on-surface-variant mb-1">Publiées</p>
+              <p className="text-2xl font-bold text-tertiary">{publishedResources}</p>
+            </div>
+            <div className="bg-surface-container-low rounded-xl p-4">
+              <p className="text-sm text-on-surface-variant mb-1">En attente</p>
+              <p className="text-2xl font-bold text-on-surface">{pendingResources}</p>
+            </div>
           </div>
         </Card>
 
         {/* Category Distribution */}
         <Card className="md:col-span-2 p-6">
           <h2 className="text-headline-md text-on-surface mb-2">
-            Création par catégorie
+            Ressources par catégorie
           </h2>
           <p className="text-sm text-on-surface-variant mb-6">
-            Répartition des nouvelles ressources ajoutées.
+            Répartition des ressources publiées.
           </p>
           <div className="space-y-4">
-            {categoryDistribution.map((cat) => (
-              <div key={cat.name}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-on-surface">{cat.name}</span>
-                  <span className="text-sm font-semibold text-on-surface">
-                    {cat.percentage}%
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${cat.percentage > 30 ? "bg-primary" : cat.percentage > 20 ? "bg-tertiary" : "bg-secondary"}`}
-                    style={{ width: `${cat.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+            {categoryStats.length === 0 ? (
+              <p className="text-sm text-on-surface-variant">Aucune ressource publiée.</p>
+            ) : (
+              categoryStats.map((cat) => {
+                const pct = Math.round((cat.count / maxCategoryStat) * 100);
+                return (
+                  <div key={cat.name}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-on-surface">{cat.name}</span>
+                      <span className="text-sm font-semibold text-on-surface">
+                        {cat.count}
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${pct > 60 ? "bg-primary" : pct > 30 ? "bg-tertiary" : "bg-secondary"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
       </div>

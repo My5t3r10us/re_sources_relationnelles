@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Bell, User } from "lucide-react";
+import { Search, Bell, User, LogOut, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+import { useState, useRef, useEffect } from "react";
 
 const navItems = [
   { href: "/catalogue", label: "Catalogue" },
@@ -13,6 +15,19 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { data: session } = authClient.useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="glassmorphism sticky top-0 z-50 shadow-sm">
@@ -45,13 +60,55 @@ export function Navbar() {
           <button className="relative p-2 text-on-surface-variant hover:text-primary transition-colors" aria-label="Notifications">
             <Bell className="w-6 h-6" />
           </button>
-          <Link
-            href="/login"
-            className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors"
-            aria-label="Mon compte"
-          >
-            <User className="w-6 h-6" />
-          </Link>
+
+          {session ? (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="w-10 h-10 rounded-full bg-primary text-on-primary-fixed flex items-center justify-center font-semibold text-sm"
+                aria-label="Mon compte"
+              >
+                {session.user.name?.charAt(0).toUpperCase() ?? "U"}
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-surface-container-lowest rounded-xl shadow-ambient py-2 z-50">
+                  <div className="px-4 py-2 border-b border-outline-variant/20">
+                    <p className="text-sm font-semibold text-on-surface truncate">{session.user.name}</p>
+                    <p className="text-xs text-on-surface-variant truncate">{session.user.email}</p>
+                  </div>
+                  <Link href="/profil" className="flex items-center gap-2 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
+                    <User className="w-4 h-4" /> Mon profil
+                  </Link>
+                  <Link href="/tableau-de-bord" className="flex items-center gap-2 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
+                    <LayoutDashboard className="w-4 h-4" /> Tableau de bord
+                  </Link>
+                  {(session.user as Record<string, unknown>).role === "admin" && (
+                    <Link href="/admin/statistiques" className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary font-medium hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
+                      <ShieldCheck className="w-4 h-4" /> Administration
+                    </Link>
+                  )}
+                  <button
+                    onClick={async () => {
+                      await authClient.signOut();
+                      setMenuOpen(false);
+                      window.location.href = "/";
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-error hover:bg-surface-container-high transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" /> Déconnexion
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+              aria-label="Mon compte"
+            >
+              <User className="w-6 h-6" />
+            </Link>
+          )}
         </div>
       </nav>
     </header>

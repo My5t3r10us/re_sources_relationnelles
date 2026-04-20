@@ -1,11 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { SidebarCatalog } from "@/components/layout/sidebar-catalog";
-import { Input, Textarea } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileEdit, CloudUpload, Upload, Shield, Send } from "lucide-react";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
+import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { publishResource } from "./publish-actions";
+import {
+  ArrowLeft,
+  FileEdit,
+  CloudUpload,
+  Upload,
+  Shield,
+  Send,
+  Eye,
+  Pencil,
+} from "lucide-react";
 
 const categories = [
   { value: "anxiete-stress", label: "Anxiété & Stress" },
@@ -25,9 +37,11 @@ const mediaTypes = [
 ];
 
 export default function PublierPage() {
+  const [content, setContent] = useState("");
+  const [preview, setPreview] = useState(false);
+
   return (
     <div className="flex min-h-screen">
-      <SidebarCatalog />
       <main className="flex-1 bg-surface">
         <div className="max-w-4xl mx-auto px-6 py-12">
           {/* Back */}
@@ -47,7 +61,7 @@ export default function PublierPage() {
             aide à construire un environnement communautaire solidaire.
           </p>
 
-          <form className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <form action={publishResource} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Main content */}
             <div className="lg:col-span-8 space-y-8">
               {/* Resource Details */}
@@ -59,15 +73,68 @@ export default function PublierPage() {
                 <div className="space-y-6">
                   <Input
                     id="title"
+                    name="title"
                     label="Titre de la ressource"
                     placeholder="Entrez un titre descriptif"
                   />
-                  <Textarea
-                    id="content"
-                    label="Contenu principal"
-                    placeholder="Rédigez le contenu de votre ressource ici..."
-                    className="min-h-[200px]"
+                  <Input
+                    id="summary"
+                    name="summary"
+                    label="Résumé (optionnel)"
+                    placeholder="Courte description pour le catalogue..."
                   />
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-label-md text-on-surface-variant">
+                        Contenu principal
+                      </label>
+                      <div className="flex items-center gap-1 bg-surface-container-high rounded-lg p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setPreview(false)}
+                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                            !preview
+                              ? "bg-primary text-on-primary-fixed"
+                              : "text-on-surface-variant hover:text-on-surface"
+                          }`}
+                        >
+                          <Pencil className="w-3.5 h-3.5 inline mr-1" />
+                          Éditer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreview(true)}
+                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                            preview
+                              ? "bg-primary text-on-primary-fixed"
+                              : "text-on-surface-variant hover:text-on-surface"
+                          }`}
+                        >
+                          <Eye className="w-3.5 h-3.5 inline mr-1" />
+                          Aperçu
+                        </button>
+                      </div>
+                    </div>
+                    {preview ? (
+                      <div className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-6 min-h-[300px]">
+                        {content ? (
+                          <MarkdownRenderer content={content} />
+                        ) : (
+                          <p className="text-on-surface-variant text-sm italic">
+                            Aucun contenu à afficher...
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <MarkdownEditor
+                        value={content}
+                        onChange={setContent}
+                        placeholder="Rédigez le contenu de votre ressource en markdown..."
+                        minHeight="300px"
+                      />
+                    )}
+                    <input type="hidden" name="content" value={content} />
+                  </div>
                 </div>
               </div>
 
@@ -99,12 +166,14 @@ export default function PublierPage() {
                 <div className="space-y-4">
                   <Select
                     id="category"
+                    name="categoryId"
                     label="Catégorie"
                     options={categories}
                     placeholder="Choisir une catégorie..."
                   />
                   <Select
                     id="mediaType"
+                    name="mediaType"
                     label="Type de média"
                     options={mediaTypes}
                     defaultValue="article"
@@ -167,10 +236,20 @@ export default function PublierPage() {
                   Publier la ressource
                 </Button>
                 <Button
-                  type="button"
+                  type="submit"
                   variant="secondary"
                   className="w-full"
                   size="lg"
+                  onClick={() => {
+                    const form = document.querySelector("form");
+                    if (form) {
+                      const input = document.createElement("input");
+                      input.type = "hidden";
+                      input.name = "isDraft";
+                      input.value = "true";
+                      form.appendChild(input);
+                    }
+                  }}
                 >
                   Enregistrer comme brouillon
                 </Button>

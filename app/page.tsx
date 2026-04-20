@@ -67,10 +67,10 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-            <div className="flex-1 grid grid-cols-2 gap-4 h-[400px] md:h-[500px]">
-              <div className="bg-surface-container-high rounded-[2rem] row-span-2 overflow-hidden" />
-              <div className="bg-surface-container-high rounded-[1.5rem] overflow-hidden" />
-              <div className="bg-surface-container-low rounded-[1.5rem] p-6 flex flex-col justify-end">
+            <div className="flex-1 grid grid-cols-2 gap-4 h-100 md:h-125">
+              <div className="bg-surface-container-high rounded-4xl row-span-2 overflow-hidden" />
+              <div className="bg-surface-container-high rounded-3xl overflow-hidden" />
+              <div className="bg-surface-container-low rounded-3xl p-6 flex flex-col justify-end">
                 <MessageSquare className="w-6 h-6 text-primary mb-2" />
                 <p className="font-bold text-on-surface text-sm">Réseau actif</p>
                 <p className="text-xs text-on-surface-variant">

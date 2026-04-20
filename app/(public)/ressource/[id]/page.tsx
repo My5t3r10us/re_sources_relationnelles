@@ -1,8 +1,117 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, Bookmark, CheckCircle, Heart } from "lucide-react";
+import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import {
+  ArrowLeft,
+  Clock,
+  Bookmark,
+  CheckCircle,
+  FileText,
+  PlayCircle,
+  FileDown,
+  Dumbbell,
+  Headphones,
+  ShieldAlert,
+  Eye,
+  Calendar,
+} from "lucide-react";
+import { db } from "@/db";
+import { resource, user, category, comment } from "@/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 
-export default function RessourcePage() {
+const mediaTypeLabels: Record<string, string> = {
+  article: "Article",
+  video: "Vidéo",
+  pdf: "Document PDF",
+  exercise: "Exercice",
+  audio: "Audio / Podcast",
+  protocol: "Protocole",
+};
+
+const mediaTypeIcons: Record<string, React.ReactNode> = {
+  article: <FileText className="w-5 h-5" />,
+  video: <PlayCircle className="w-5 h-5" />,
+  pdf: <FileDown className="w-5 h-5" />,
+  exercise: <Dumbbell className="w-5 h-5" />,
+  audio: <Headphones className="w-5 h-5" />,
+  protocol: <ShieldAlert className="w-5 h-5" />,
+};
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function RessourcePage({ params }: PageProps) {
+  const { id } = await params;
+
+  const [res] = await db
+    .select({
+      id: resource.id,
+      title: resource.title,
+      content: resource.content,
+      summary: resource.summary,
+      mediaType: resource.mediaType,
+      privacy: resource.privacy,
+      status: resource.status,
+      imageUrl: resource.imageUrl,
+      readingTime: resource.readingTime,
+      viewCount: resource.viewCount,
+      createdAt: resource.createdAt,
+      authorName: user.name,
+      authorImage: user.image,
+      authorId: user.id,
+      categoryName: category.name,
+      categorySlug: category.slug,
+    })
+    .from(resource)
+    .innerJoin(user, eq(resource.authorId, user.id))
+    .leftJoin(category, eq(resource.categoryId, category.id))
+    .where(eq(resource.id, id))
+    .limit(1);
+
+  if (!res) notFound();
+
+  // Increment view count
+  db.update(resource)
+    .set({ viewCount: res.viewCount + 1 })
+    .where(eq(resource.id, id))
+    .then(() => {});
+
+  const comments = await db
+    .select({
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.createdAt,
+      authorName: user.name,
+      authorImage: user.image,
+      authorId: user.id,
+      parentId: comment.parentId,
+      likes: comment.likes,
+    })
+    .from(comment)
+    .innerJoin(user, eq(comment.authorId, user.id))
+    .where(and(eq(comment.resourceId, id), eq(comment.status, "visible")))
+    .orderBy(desc(comment.createdAt));
+
+  const topLevelComments = comments.filter((c) => !c.parentId);
+  const replies = comments.filter((c) => c.parentId);
+
+  const formattedDate = res.createdAt.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  function getInitials(name: string) {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+
   return (
     <main className="max-w-4xl mx-auto px-6 py-12">
       {/* Back */}
@@ -16,23 +125,48 @@ export default function RessourcePage() {
 
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <Badge variant="primary">Anxiété &amp; Stress</Badge>
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          {res.categoryName && (
+            <Badge variant="primary">{res.categoryName}</Badge>
+          )}
+          <Badge variant="secondary">
+            {mediaTypeIcons[res.mediaType]}
+            {mediaTypeLabels[res.mediaType]}
+          </Badge>
+          {res.readingTime && (
+            <span className="flex items-center gap-1 text-sm text-on-surface-variant">
+              <Clock className="w-4 h-4" />
+              {res.readingTime} min de lecture
+            </span>
+          )}
           <span className="flex items-center gap-1 text-sm text-on-surface-variant">
-            <Clock className="w-4 h-4" />
-            8 min de lecture
+            <Eye className="w-4 h-4" />
+            {res.viewCount} vue{res.viewCount !== 1 ? "s" : ""}
           </span>
         </div>
         <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface mb-6 leading-tight">
-          Gérer le burnout au travail : un guide pratique de récupération
+          {res.title}
         </h1>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-surface-container-high" />
-          <div>
-            <p className="font-semibold text-on-surface">Dr. Sarah Jenkins</p>
-            <p className="text-sm text-on-surface-variant">
-              Psychologue clinicienne
-            </p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            {res.authorImage ? (
+              <img
+                src={res.authorImage}
+                alt={res.authorName}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                {getInitials(res.authorName)}
+              </div>
+            )}
+            <div>
+              <p className="font-semibold text-on-surface">{res.authorName}</p>
+              <p className="text-sm text-on-surface-variant flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" />
+                {formattedDate}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3 ml-auto">
             <button className="bg-surface-container-highest text-primary rounded-xl px-5 py-2.5 text-sm font-semibold inline-flex items-center gap-2">
@@ -48,81 +182,33 @@ export default function RessourcePage() {
       </div>
 
       {/* Hero image */}
-      <div className="aspect-video bg-surface-container-high rounded-xl mb-10 overflow-hidden" />
-
-      {/* Article content */}
-      <article className="prose prose-lg max-w-none">
-        <p className="text-lg text-on-surface leading-relaxed mb-6">
-          Le burnout est bien plus que simplement se sentir fatigué après une
-          longue semaine. C&apos;est un état d&apos;épuisement émotionnel, physique et
-          mental causé par un stress excessif et prolongé. Il survient lorsque
-          vous vous sentez submergé, émotionnellement vidé et incapable de
-          répondre aux demandes constantes.
-        </p>
-
-        <h2 className="text-headline-md text-on-surface mt-10 mb-4">
-          Reconnaître les premiers signes
-        </h2>
-        <p className="text-on-surface leading-relaxed mb-6">
-          Souvent, nous ignorons les signaux subtils que nos corps et nos
-          esprits nous envoient. Le chemin vers la récupération commence par la
-          reconnaissance. Si vous vous trouvez de plus en plus cynique envers
-          votre travail, manquant d&apos;énergie pour être constamment productif, ou
-          ressentant un sentiment de terreur au réveil, ce ne sont pas juste des
-          &quot;mauvais jours&quot; — ce sont des indicateurs d&apos;un problème systémique.
-        </p>
-
-        {/* Blockquote */}
-        <div className="relative bg-surface-container-low p-8 rounded-xl my-8">
-          <div className="absolute left-0 top-0 bottom-0 w-2 bg-tertiary rounded-l-xl" />
-          <p className="italic text-on-surface pl-4">
-            &quot;La récupération ne consiste pas à revenir à l&apos;état antérieur. Il
-            s&apos;agit de construire une nouvelle façon de vivre et de travailler,
-            plus durable.&quot;
-          </p>
+      {res.imageUrl && (
+        <div className="aspect-video rounded-xl mb-10 overflow-hidden">
+          <img
+            src={res.imageUrl}
+            alt={res.title}
+            className="w-full h-full object-cover"
+          />
         </div>
+      )}
 
-        <h2 className="text-headline-md text-on-surface mt-10 mb-4">
-          Actions concrètes pour aujourd&apos;hui
-        </h2>
-        <p className="text-on-surface leading-relaxed mb-6">
-          Bien que la récupération profonde prenne du temps, il existe des
-          interventions immédiates qui peuvent stabiliser votre quotidien.
-          Créer des limites strictes entre le &quot;temps de travail&quot; et le &quot;temps
-          personnel&quot; est primordial.
-        </p>
-
-        <div className="space-y-4 mb-8">
-          {[
-            {
-              title: "Instaurer un arrêt ferme",
-              desc: "Choisissez une heure précise pour terminer votre journée de travail et respectez-la scrupuleusement.",
-            },
-            {
-              title: "Micro-restaurations",
-              desc: "Prenez des pauses sensorielles de 5 minutes, loin des écrans, toutes les 90 minutes.",
-            },
-            {
-              title: "Déléguer ou abandonner",
-              desc: "Auditez vos tâches actuelles et identifiez au moins une qui peut être reportée ou déléguée.",
-            },
-          ].map((item) => (
-            <div key={item.title} className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-tertiary mt-0.5" />
-              <div>
-                <strong className="text-on-surface">{item.title} :</strong>{" "}
-                <span className="text-on-surface-variant">{item.desc}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </article>
+      {/* Content by media type */}
+      <ResourceContent
+        mediaType={res.mediaType}
+        content={res.content}
+        title={res.title}
+      />
 
       {/* Comments section */}
       <section className="bg-surface-container-low rounded-2xl p-8 mt-12">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-headline-md text-on-surface">
             Discussion communautaire
+            {topLevelComments.length > 0 && (
+              <span className="text-on-surface-variant font-normal text-lg ml-2">
+                ({comments.length})
+              </span>
+            )}
           </h2>
           <Badge variant="secondary">Modéré</Badge>
         </div>
@@ -143,64 +229,239 @@ export default function RessourcePage() {
           </div>
         </div>
 
-        {/* Example comments */}
-        <div className="space-y-6">
-          <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-surface-container-high shrink-0" />
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-sm text-on-surface">
-                  Alex M.
-                </span>
-                <span className="text-xs text-on-surface-variant">
-                  Il y a 2 heures
-                </span>
-              </div>
-              <p className="text-sm text-on-surface-variant mb-2">
-                Le point sur les &quot;micro-restaurations&quot; m&apos;a vraiment parlé. Je
-                passe généralement toute la journée sans lever les yeux de mon
-                écran, et à 17h je suis complètement vidé. Je vais essayer la
-                règle des 90 minutes demain.
-              </p>
-              <div className="flex items-center gap-4 text-sm text-on-surface-variant">
-                <button className="flex items-center gap-1 hover:text-primary transition-colors">
-                  <Heart className="w-4 h-4" />
-                  12
-                </button>
-                <button className="hover:text-primary transition-colors">
-                  Répondre
-                </button>
-              </div>
-
-              {/* Nested reply */}
-              <div className="mt-4 ml-2 pl-4 border-l-2 border-primary">
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-surface-container-high shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-sm text-on-surface">
-                        Dr. Sarah Jenkins
-                      </span>
-                      <Badge variant="secondary" className="text-[10px] py-0.5 px-2">
-                        Auteur
-                      </Badge>
+        {/* Comments list */}
+        {topLevelComments.length === 0 ? (
+          <p className="text-center text-on-surface-variant py-8">
+            Aucun commentaire pour le moment. Soyez le premier à partager votre
+            avis !
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {topLevelComments.map((c) => {
+              const commentReplies = replies.filter(
+                (r) => r.parentId === c.id
+              );
+              return (
+                <div key={c.id} className="flex gap-4">
+                  {c.authorImage ? (
+                    <img
+                      src={c.authorImage}
+                      alt={c.authorName}
+                      className="w-10 h-10 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-surface-container-high shrink-0 flex items-center justify-center text-xs font-semibold text-on-surface-variant">
+                      {getInitials(c.authorName)}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-on-surface">
+                          {c.authorName}
+                        </span>
+                        {c.authorId === res.authorId && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] py-0.5 px-2"
+                          >
+                            Auteur
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-xs text-on-surface-variant">
-                        Il y a 1 heure
+                        {c.createdAt.toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "short",
+                        })}
                       </span>
                     </div>
-                    <p className="text-sm text-on-surface-variant">
-                      C&apos;est merveilleux à entendre, Alex. Commencez petit — même
-                      simplement fermer les yeux et prendre cinq respirations
-                      profondes compte comme une restauration. Tenez-nous au
-                      courant !
+                    <p className="text-sm text-on-surface-variant mb-2">
+                      {c.content}
                     </p>
+
+                    {/* Replies */}
+                    {commentReplies.length > 0 && (
+                      <div className="mt-4 ml-2 pl-4 border-l-2 border-primary space-y-4">
+                        {commentReplies.map((reply) => (
+                          <div key={reply.id} className="flex gap-3">
+                            {reply.authorImage ? (
+                              <img
+                                src={reply.authorImage}
+                                alt={reply.authorName}
+                                className="w-8 h-8 rounded-full object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-surface-container-high shrink-0 flex items-center justify-center text-[10px] font-semibold text-on-surface-variant">
+                                {getInitials(reply.authorName)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-sm text-on-surface">
+                                  {reply.authorName}
+                                </span>
+                                {reply.authorId === res.authorId && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] py-0.5 px-2"
+                                  >
+                                    Auteur
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-on-surface-variant">
+                                  {reply.createdAt.toLocaleDateString("fr-FR", {
+                                    day: "numeric",
+                                    month: "short",
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-on-surface-variant">
+                                {reply.content}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </section>
     </main>
   );
+}
+
+function ResourceContent({
+  mediaType,
+  content,
+  title,
+}: {
+  mediaType: string;
+  content: string;
+  title: string;
+}) {
+  switch (mediaType) {
+    case "article":
+      return (
+        <article>
+          <MarkdownRenderer content={content} />
+        </article>
+      );
+
+    case "video":
+      return (
+        <div className="space-y-8">
+          {isUrl(content) ? (
+            <div className="aspect-video rounded-xl overflow-hidden bg-surface-container-high">
+              {content.includes("youtube") || content.includes("youtu.be") ? (
+                <iframe
+                  src={toYoutubeEmbed(content)}
+                  title={title}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video controls className="w-full h-full">
+                  <source src={content} />
+                  Votre navigateur ne supporte pas la lecture vidéo.
+                </video>
+              )}
+            </div>
+          ) : (
+            <article>
+              <MarkdownRenderer content={content} />
+            </article>
+          )}
+        </div>
+      );
+
+    case "audio":
+      return (
+        <div className="space-y-8">
+          {isUrl(content) ? (
+            <div className="bg-surface-container-low rounded-xl p-8 flex flex-col items-center gap-4">
+              <Headphones className="w-16 h-16 text-primary" />
+              <h2 className="text-headline-md text-on-surface">{title}</h2>
+              <audio controls className="w-full max-w-xl">
+                <source src={content} />
+                Votre navigateur ne supporte pas la lecture audio.
+              </audio>
+            </div>
+          ) : (
+            <article>
+              <MarkdownRenderer content={content} />
+            </article>
+          )}
+        </div>
+      );
+
+    case "pdf":
+      return (
+        <div className="space-y-8">
+          {isUrl(content) ? (
+            <div className="space-y-4">
+              <div
+                className="bg-surface-container-low rounded-xl overflow-hidden"
+                style={{ height: "80vh" }}
+              >
+                <iframe
+                  src={content}
+                  title={title}
+                  className="w-full h-full"
+                />
+              </div>
+              <a
+                href={content}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 gradient-primary text-on-primary-fixed rounded-xl px-5 py-2.5 text-sm font-semibold"
+              >
+                <FileDown className="w-4.5 h-4.5" />
+                Télécharger le PDF
+              </a>
+            </div>
+          ) : (
+            <article>
+              <MarkdownRenderer content={content} />
+            </article>
+          )}
+        </div>
+      );
+
+    case "exercise":
+    case "protocol":
+    default:
+      return (
+        <article>
+          <MarkdownRenderer content={content} />
+        </article>
+      );
+  }
+}
+
+function isUrl(text: string): boolean {
+  const trimmed = text.trim();
+  return trimmed.startsWith("http://") || trimmed.startsWith("https://");
+}
+
+function toYoutubeEmbed(url: string): string {
+  let videoId = "";
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname.includes("youtu.be")) {
+      videoId = urlObj.pathname.slice(1);
+    } else {
+      videoId = urlObj.searchParams.get("v") || "";
+    }
+  } catch {
+    return url;
+  }
+  return videoId
+    ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}`
+    : url;
 }
