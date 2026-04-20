@@ -19,6 +19,8 @@ import {
 import { db } from "@/db";
 import { resource, user, category, comment } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { getServerSession } from "@/lib/auth-server";
+import { CommentSection } from "./comment-section";
 
 const mediaTypeLabels: Record<string, string> = {
   article: "Article",
@@ -94,8 +96,7 @@ export default async function RessourcePage({ params }: PageProps) {
     .where(and(eq(comment.resourceId, id), eq(comment.status, "visible")))
     .orderBy(desc(comment.createdAt));
 
-  const topLevelComments = comments.filter((c) => !c.parentId);
-  const replies = comments.filter((c) => c.parentId);
+  const session = await getServerSession();
 
   const formattedDate = res.createdAt.toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -200,137 +201,14 @@ export default async function RessourcePage({ params }: PageProps) {
       />
 
       {/* Comments section */}
-      <section className="bg-surface-container-low rounded-2xl p-8 mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-headline-md text-on-surface">
-            Discussion communautaire
-            {topLevelComments.length > 0 && (
-              <span className="text-on-surface-variant font-normal text-lg ml-2">
-                ({comments.length})
-              </span>
-            )}
-          </h2>
-          <Badge variant="secondary">Modéré</Badge>
-        </div>
-
-        {/* Comment input */}
-        <div className="flex gap-4 mb-8">
-          <div className="w-10 h-10 rounded-full bg-surface-container-high shrink-0" />
-          <div className="flex-1">
-            <textarea
-              placeholder="Partagez votre expérience ou posez une question..."
-              className="w-full bg-surface-container-lowest rounded-xl px-4 py-3 text-sm text-on-surface placeholder:text-outline border-none focus:ring-2 focus:ring-primary/20 focus:outline-none resize-none min-h-[80px]"
-            />
-            <div className="flex justify-end mt-2">
-              <button className="gradient-primary text-on-primary-fixed rounded-xl px-5 py-2.5 text-sm font-semibold">
-                Publier le commentaire
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Comments list */}
-        {topLevelComments.length === 0 ? (
-          <p className="text-center text-on-surface-variant py-8">
-            Aucun commentaire pour le moment. Soyez le premier à partager votre
-            avis !
-          </p>
-        ) : (
-          <div className="space-y-6">
-            {topLevelComments.map((c) => {
-              const commentReplies = replies.filter(
-                (r) => r.parentId === c.id
-              );
-              return (
-                <div key={c.id} className="flex gap-4">
-                  {c.authorImage ? (
-                    <img
-                      src={c.authorImage}
-                      alt={c.authorName}
-                      className="w-10 h-10 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-surface-container-high shrink-0 flex items-center justify-center text-xs font-semibold text-on-surface-variant">
-                      {getInitials(c.authorName)}
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-on-surface">
-                          {c.authorName}
-                        </span>
-                        {c.authorId === res.authorId && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] py-0.5 px-2"
-                          >
-                            Auteur
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-xs text-on-surface-variant">
-                        {c.createdAt.toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-on-surface-variant mb-2">
-                      {c.content}
-                    </p>
-
-                    {/* Replies */}
-                    {commentReplies.length > 0 && (
-                      <div className="mt-4 ml-2 pl-4 border-l-2 border-primary space-y-4">
-                        {commentReplies.map((reply) => (
-                          <div key={reply.id} className="flex gap-3">
-                            {reply.authorImage ? (
-                              <img
-                                src={reply.authorImage}
-                                alt={reply.authorName}
-                                className="w-8 h-8 rounded-full object-cover shrink-0"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-surface-container-high shrink-0 flex items-center justify-center text-[10px] font-semibold text-on-surface-variant">
-                                {getInitials(reply.authorName)}
-                              </div>
-                            )}
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-semibold text-sm text-on-surface">
-                                  {reply.authorName}
-                                </span>
-                                {reply.authorId === res.authorId && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] py-0.5 px-2"
-                                  >
-                                    Auteur
-                                  </Badge>
-                                )}
-                                <span className="text-xs text-on-surface-variant">
-                                  {reply.createdAt.toLocaleDateString("fr-FR", {
-                                    day: "numeric",
-                                    month: "short",
-                                  })}
-                                </span>
-                              </div>
-                              <p className="text-sm text-on-surface-variant">
-                                {reply.content}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      <CommentSection
+        resourceId={res.id}
+        resourceAuthorId={res.authorId}
+        comments={comments}
+        currentUserId={session?.user?.id}
+        currentUserName={session?.user?.name}
+        currentUserImage={session?.user?.image}
+      />
     </main>
   );
 }
