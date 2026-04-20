@@ -1,26 +1,132 @@
+@import url("https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500&display=swap");
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Primary */
+  --color-primary: #0356d5;
+  --color-primary-container: #3f78f7;
+  --color-primary-dim: #004bbc;
+  --color-on-primary-fixed: #ffffff;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Secondary */
+  --color-secondary: #4d626c;
+  --color-secondary-container: #cfe6f2;
+  --color-on-secondary-container: #2d3335;
+
+  /* Tertiary */
+  --color-tertiary: #15696d;
+  --color-tertiary-container: #b1fbff;
+
+  /* Error */
+  --color-error: #a83836;
+  --color-error-container: #fa746f;
+  --color-on-error: #ffffff;
+
+  /* Surfaces */
+  --color-surface: #f8f9fa;
+  --color-surface-container-low: #f1f4f5;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-high: #e5e9eb;
+  --color-surface-container-highest: #dee3e6;
+  --color-surface-variant: #e5e9eb;
+
+  /* On Surface */
+  --color-on-surface: #2d3335;
+  --color-on-surface-variant: #5a6062;
+
+  /* Outline */
+  --color-outline: #767c7e;
+  --color-outline-variant: #adb3b5;
+
+  /* Fonts */
+  --font-sans: "Public Sans", system-ui, sans-serif;
+  --font-headline: "Public Sans", system-ui, sans-serif;
+
+  /* Border Radius */
+  --radius-sm: 0.125rem;
+  --radius-DEFAULT: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+  --radius-full: 9999px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+/* Design system utilities */
+.gradient-primary {
+  background: linear-gradient(135deg, #0356d5 0%, #3f78f7 100%);
+}
+
+.shadow-ambient {
+  box-shadow: 0 10px 30px rgba(45, 51, 53, 0.06);
+}
+
+.shadow-ambient-sm {
+  box-shadow: 0 4px 20px rgba(45, 51, 53, 0.02);
+}
+
+.shadow-ambient-hover {
+  box-shadow: 0 10px 30px rgba(45, 51, 53, 0.06);
+}
+
+.glassmorphism {
+  background: rgba(248, 249, 250, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Ghost border for focus states */
+.ghost-border-focus:focus {
+  outline: 2px solid rgba(173, 179, 181, 0.2);
+  outline-offset: 2px;
+}
+
+/* Typography scale */
+.text-display-lg {
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.text-headline-lg {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.text-headline-md {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.text-title-md {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.text-label-md {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.text-label-sm {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

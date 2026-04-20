@@ -1,4 +1,58 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  integer,
+  pgEnum,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+
+// Enums
+export const userRoleEnum = pgEnum("user_role", [
+  "citizen",
+  "moderator",
+  "admin",
+]);
+
+export const resourceStatusEnum = pgEnum("resource_status", [
+  "draft",
+  "pending",
+  "published",
+  "rejected",
+  "flagged",
+]);
+
+export const resourcePrivacyEnum = pgEnum("resource_privacy", [
+  "public",
+  "shared",
+  "private",
+]);
+
+export const mediaTypeEnum = pgEnum("media_type", [
+  "article",
+  "video",
+  "pdf",
+  "exercise",
+  "audio",
+  "protocol",
+]);
+
+export const commentStatusEnum = pgEnum("comment_status", [
+  "visible",
+  "hidden",
+  "flagged",
+]);
+
+export const reportReasonEnum = pgEnum("report_reason", [
+  "harassment",
+  "spam",
+  "misinformation",
+  "inappropriate",
+  "other",
+]);
+
+// ─── Auth tables (better-auth) ───
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -8,6 +62,7 @@ export const user = pgTable("user", {
   image: text("image"),
   firstName: text("first_name"),
   lastName: text("last_name"),
+  role: userRoleEnum("role").notNull().default("citizen"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -52,3 +107,139 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ─── Business tables ───
+
+export const category = pgTable("category", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  icon: text("icon"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const resource = pgTable("resource", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  summary: text("summary"),
+  mediaType: mediaTypeEnum("media_type").notNull().default("article"),
+  privacy: resourcePrivacyEnum("privacy").notNull().default("public"),
+  status: resourceStatusEnum("status").notNull().default("draft"),
+  categoryId: text("category_id").references(() => category.id, {
+    onDelete: "set null",
+  }),
+  authorId: text("author_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url"),
+  readingTime: integer("reading_time"),
+  featured: boolean("featured").notNull().default(false),
+  viewCount: integer("view_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const comment = pgTable("comment", {
+  id: text("id").primaryKey(),
+  content: text("content").notNull(),
+  resourceId: text("resource_id")
+    .notNull()
+    .references(() => resource.id, { onDelete: "cascade" }),
+  authorId: text("author_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  parentId: text("parent_id"),
+  status: commentStatusEnum("status").notNull().default("visible"),
+  likes: integer("likes").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const favorite = pgTable("favorite", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  resourceId: text("resource_id")
+    .notNull()
+    .references(() => resource.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const completion = pgTable("completion", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  resourceId: text("resource_id")
+    .notNull()
+    .references(() => resource.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const report = pgTable("report", {
+  id: text("id").primaryKey(),
+  reason: reportReasonEnum("reason").notNull(),
+  description: text("description"),
+  resourceId: text("resource_id").references(() => resource.id, {
+    onDelete: "cascade",
+  }),
+  commentId: text("comment_id").references(() => comment.id, {
+    onDelete: "cascade",
+  }),
+  reporterId: text("reporter_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  resolved: boolean("resolved").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ─── Relations ───
+
+export const userRelations = relations(user, ({ many }) => ({
+  resources: many(resource),
+  comments: many(comment),
+  favorites: many(favorite),
+  completions: many(completion),
+}));
+
+export const categoryRelations = relations(category, ({ many }) => ({
+  resources: many(resource),
+}));
+
+export const resourceRelations = relations(resource, ({ one, many }) => ({
+  author: one(user, { fields: [resource.authorId], references: [user.id] }),
+  category: one(category, {
+    fields: [resource.categoryId],
+    references: [category.id],
+  }),
+  comments: many(comment),
+  favorites: many(favorite),
+  completions: many(completion),
+}));
+
+export const commentRelations = relations(comment, ({ one }) => ({
+  resource: one(resource, {
+    fields: [comment.resourceId],
+    references: [resource.id],
+  }),
+  author: one(user, { fields: [comment.authorId], references: [user.id] }),
+}));
+
+export const favoriteRelations = relations(favorite, ({ one }) => ({
+  user: one(user, { fields: [favorite.userId], references: [user.id] }),
+  resource: one(resource, {
+    fields: [favorite.resourceId],
+    references: [resource.id],
+  }),
+}));
+
+export const completionRelations = relations(completion, ({ one }) => ({
+  user: one(user, { fields: [completion.userId], references: [user.id] }),
+  resource: one(resource, {
+    fields: [completion.resourceId],
+    references: [resource.id],
+  }),
+}));

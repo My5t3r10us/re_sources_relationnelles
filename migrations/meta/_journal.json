@@ -8,6 +8,13 @@
       "when": 1776672314829,
       "tag": "0000_eminent_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776676755658,
+      "tag": "0001_dry_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

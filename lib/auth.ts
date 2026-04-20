@@ -25,6 +25,13 @@ export const auth = betterAuth({
         input: true,
         fieldName: "lastName",
       },
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "citizen",
+        input: false,
+        fieldName: "role",
+      },
       active: {
         type: "boolean",
         required: false,

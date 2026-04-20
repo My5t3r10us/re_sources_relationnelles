@@ -50,18 +50,18 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8 rounded-lg border border-gray-200 p-8 shadow-sm dark:border-gray-800">
+    <div className="flex min-h-screen items-center justify-center bg-surface-container-low">
+      <div className="w-full max-w-md space-y-8 bg-surface-container-lowest rounded-xl shadow-ambient p-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Créer un compte</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <h1 className="text-headline-lg text-on-surface">Créer un compte</h1>
+          <p className="mt-2 text-sm text-on-surface-variant">
             Inscrivez-vous pour commencer
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+            <div className="rounded-xl bg-error-container/10 p-3 text-sm text-error">
               {error}
             </div>
           )}
@@ -70,7 +70,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="firstName"
-                className="block text-sm font-medium"
+                className="text-label-md text-on-surface-variant block mb-1.5"
               >
                 Prénom
               </label>
@@ -80,14 +80,14 @@ export default function RegisterPage() {
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+                className="block w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest focus:outline-none"
                 placeholder="Jean"
               />
             </div>
             <div>
               <label
                 htmlFor="lastName"
-                className="block text-sm font-medium"
+                className="text-label-md text-on-surface-variant block mb-1.5"
               >
                 Nom
               </label>
@@ -97,7 +97,7 @@ export default function RegisterPage() {
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+                className="block w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest focus:outline-none"
                 placeholder="Dupont"
               />
             </div>
@@ -106,7 +106,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium"
+              className="text-label-md text-on-surface-variant block mb-1.5"
             >
               Email
             </label>
@@ -116,7 +116,7 @@ export default function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+              className="block w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest focus:outline-none"
               placeholder="vous@exemple.com"
             />
           </div>
@@ -124,7 +124,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium"
+              className="text-label-md text-on-surface-variant block mb-1.5"
             >
               Mot de passe
             </label>
@@ -135,7 +135,7 @@ export default function RegisterPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+              className="block w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest focus:outline-none"
               placeholder="••••••••"
             />
           </div>
@@ -143,7 +143,7 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="confirmPassword"
-              className="block text-sm font-medium"
+              className="text-label-md text-on-surface-variant block mb-1.5"
             >
               Confirmer le mot de passe
             </label>
@@ -154,7 +154,7 @@ export default function RegisterPage() {
               minLength={8}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900"
+              className="block w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest focus:outline-none"
               placeholder="••••••••"
             />
           </div>
@@ -162,17 +162,17 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            className="w-full gradient-primary text-on-primary-fixed rounded-xl px-6 py-3 font-semibold hover:opacity-90 disabled:opacity-50 transition-all"
           >
             {loading ? "Inscription..." : "S'inscrire"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-center text-sm text-on-surface-variant">
           Déjà un compte ?{" "}
           <Link
             href="/login"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-semibold text-primary hover:underline"
           >
             Se connecter
           </Link>
