@@ -1,22 +1,27 @@
 "use server";
 
 import { db } from "@/db";
-import { resource, category } from "@/db/schema";
+import { resource } from "@/db/schema";
 import { getServerSession } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function publishResource(formData: FormData) {
+interface PublishParams {
+  title: string;
+  content: string;
+  summary: string;
+  mediaType: string;
+  categoryId: string | null;
+  privacy: "public" | "private";
+  isDraft: boolean;
+  imageUrl: string | null;
+}
+
+export async function publishResource(params: PublishParams) {
   const session = await getServerSession();
   if (!session?.user) throw new Error("Non authentifié");
 
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-  const summary = formData.get("summary") as string;
-  const mediaType = formData.get("mediaType") as string;
-  const categoryId = formData.get("categoryId") as string;
-  const privacy = formData.get("privacy") as string;
-  const isDraft = formData.get("isDraft") === "true";
+  const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl } = params;
 
   if (!title?.trim() || !content?.trim()) {
     throw new Error("Le titre et le contenu sont requis");
@@ -33,14 +38,22 @@ export async function publishResource(formData: FormData) {
     title: title.trim(),
     content,
     summary: summary?.trim() || title.trim().substring(0, 160),
-    mediaType: (mediaType || "article") as "article" | "video" | "pdf" | "exercise" | "audio" | "protocol",
-    privacy: (privacy || "public") as "public" | "shared" | "private",
+    mediaType: (mediaType || "article") as
+      | "article"
+      | "video"
+      | "pdf"
+      | "exercise"
+      | "audio"
+      | "protocol",
+    privacy: privacy || "public",
     status: isDraft ? "draft" : "pending",
     categoryId: categoryId || null,
     authorId: session.user.id,
+    imageUrl: imageUrl || null,
     readingTime,
   });
 
   revalidatePath("/catalogue");
   redirect(`/ressource/${id}`);
 }
+

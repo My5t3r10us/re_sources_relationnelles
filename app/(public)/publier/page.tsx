@@ -1,25 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { MarkdownEditor } from "@/components/markdown/markdown-editor";
-import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { WysiwygEditor } from "@/components/editor/wysiwyg-editor";
 import { publishResource } from "./publish-actions";
-import {
-  ArrowLeft,
-  FileEdit,
-  CloudUpload,
-  Upload,
-  Shield,
-  Send,
-  Eye,
-  Pencil,
-} from "lucide-react";
-
+import { X, Paperclip } from "lucide-react";
 const categories = [
+  { value: "", label: "Choisir un chemin..." },
   { value: "anxiete-stress", label: "Anxiété & Stress" },
   { value: "equilibre-vie", label: "Équilibre vie pro/perso" },
   { value: "parentalite", label: "Parentalité" },
@@ -27,8 +14,8 @@ const categories = [
   { value: "sante-mentale", label: "Santé mentale" },
 ];
 
-const mediaTypes = [
-  { value: "article", label: "Article / Texte" },
+const formats = [
+  { value: "article", label: "Article / Réflexion" },
   { value: "video", label: "Vidéo" },
   { value: "pdf", label: "Document PDF" },
   { value: "exercise", label: "Exercice" },
@@ -36,228 +23,376 @@ const mediaTypes = [
   { value: "protocol", label: "Protocole" },
 ];
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+interface UploadedFile {
+  name: string;
+  url: string;
+  type: string;
+}
+
 export default function PublierPage() {
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [preview, setPreview] = useState(false);
+  const [categoryId, setCategoryId] = useState("");
+  const [mediaType, setMediaType] = useState("article");
+  const [privacy, setPrivacy] = useState("public");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const statusLabel: Record<SaveStatus, string> = {
+    idle: "Brouillon...",
+    saving: "Enregistrement...",
+    saved: "Enregistré ✓",
+    error: "Erreur",
+  };
+
+  const uploadFile = useCallback(async (file: File): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Erreur lors de l'upload");
+        return null;
+      }
+
+      const { uploadUrl, publicUrl } = await res.json();
+
+      const upload = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!upload.ok) {
+        alert("Erreur lors de l'envoi du fichier vers le stockage");
+        return null;
+      }
+
+      return publicUrl as string;
+    } catch {
+      alert("Erreur réseau lors de l'upload");
+      return null;
+    }
+  }, []);
+
+  const handleFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files);
+      if (fileArray.length === 0) return;
+
+      setIsUploading(true);
+      const results: UploadedFile[] = [];
+
+      for (const file of fileArray) {
+        const url = await uploadFile(file);
+        if (url) {
+          results.push({ name: file.name, url, type: file.type });
+        }
+      }
+
+      setUploadedFiles((prev) => [...prev, ...results]);
+      setIsUploading(false);
+    },
+    [uploadFile]
+  );
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) handleFiles(e.target.files);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => setIsDragging(false);
+
+  const handleRemoveFile = (url: string) => {
+    setUploadedFiles((prev) => prev.filter((f) => f.url !== url));
+  };
+
+  const handleSubmit = async (isDraft = false) => {
+    if (!title.trim() || !content.trim()) {
+      alert("Le titre et le contenu sont requis.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSaveStatus("saving");
+
+    try {
+      const imageUrl =
+        uploadedFiles.find((f) => f.type.startsWith("image/"))?.url ?? null;
+
+      await publishResource({
+        title: title.trim(),
+        content,
+        summary: "",
+        mediaType,
+        categoryId: categoryId || null,
+        privacy: privacy as "public" | "private",
+        isDraft,
+        imageUrl,
+      });
+
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen">
-      <main className="flex-1 bg-surface">
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          {/* Back */}
-          <Link
-            href="/catalogue"
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline mb-6"
-          >
-            <ArrowLeft className="w-4.5 h-4.5" />
-            Retour au catalogue
-          </Link>
+    <div className="fixed inset-0 z-50 bg-surface overflow-auto flex flex-col">
+      {/* Top bar */}
+      <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-surface/95 backdrop-blur-sm border-b border-black/5">
+        <Link
+          href="/catalogue"
+          className="flex items-center gap-1.5 text-xs font-semibold tracking-widest uppercase text-on-surface-variant hover:text-on-surface transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
+          Quitter le mode rédaction
+        </Link>
+        <span className="text-xs font-medium text-on-surface-variant/60">
+          {statusLabel[saveStatus]}
+        </span>
+      </div>
 
-          <h1 className="text-4xl md:text-5xl font-extrabold text-on-surface mb-4">
-            Publier une ressource
+      {/* Content */}
+      <div className="flex-1 w-full max-w-2xl mx-auto px-8 py-16">
+        {/* Decorative header */}
+        <div className="mb-14 select-none pointer-events-none">
+          <h1 className="text-5xl font-extrabold text-on-surface/[0.07] mb-3 leading-tight">
+            {title.trim() || "Ressource sans titre"}
           </h1>
-          <p className="text-lg text-on-surface-variant mb-10 max-w-2xl">
-            Partagez vos connaissances ou votre expérience. Votre contribution
-            aide à construire un environnement communautaire solidaire.
+          <p className="text-on-surface-variant/30 text-base">
+            Commencez à partager vos connaissances. Le monde vous écoute.
+          </p>
+        </div>
+
+        {/* Title */}
+        <div className="mb-8">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Donnez un titre à votre ressource..."
+            className="w-full text-xl font-semibold bg-transparent border-0 border-b border-black/10 pb-4 focus:outline-none focus:border-primary/40 text-on-surface placeholder:text-on-surface/20 transition-colors"
+          />
+        </div>
+
+        {/* WYSIWYG Editor */}
+        <div className="mb-12">
+          <WysiwygEditor
+            value={content}
+            onChange={setContent}
+            placeholder="Commencez à rédiger votre ressource ici..."
+          />
+        </div>
+
+        <hr className="border-black/8 mb-10" />
+
+        {/* Metadata */}
+        <div className="grid grid-cols-2 gap-10 mb-8">
+          {/* Category */}
+          <div>
+            <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+              Catégorie
+            </label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full bg-transparent border-0 border-b border-black/10 pb-2 text-sm text-on-surface focus:outline-none focus:border-primary/40 transition-colors cursor-pointer"
+            >
+              {categories.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Visibility */}
+          <div>
+            <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+              Visibilité
+            </label>
+            <div className="space-y-2.5">
+              {[
+                { value: "public", label: "Public", desc: "Visible par toute la communauté" },
+                { value: "private", label: "Privé", desc: "Accessible uniquement par vous" },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className="flex items-center gap-3 cursor-pointer group"
+                >
+                  <div className="relative shrink-0">
+                    <input
+                      type="radio"
+                      name="privacy"
+                      value={opt.value}
+                      checked={privacy === opt.value}
+                      onChange={() => setPrivacy(opt.value)}
+                      className="sr-only"
+                    />
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        privacy === opt.value
+                          ? "border-primary bg-primary"
+                          : "border-outline-variant group-hover:border-primary/50"
+                      }`}
+                    >
+                      {privacy === opt.value && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-on-surface font-medium">
+                      {opt.label}
+                    </span>
+                    <span className="text-xs text-on-surface-variant/60 ml-1.5">
+                      — {opt.desc}
+                    </span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Format */}
+        <div className="mb-10">
+          <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+            Format
+          </label>
+          <select
+            value={mediaType}
+            onChange={(e) => setMediaType(e.target.value)}
+            className="w-full bg-transparent border-0 border-b border-black/10 pb-2 text-sm text-on-surface focus:outline-none focus:border-primary/40 transition-colors cursor-pointer"
+          >
+            {formats.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* File upload */}
+        <div
+          className={`border-2 border-dashed rounded-xl p-10 text-center mb-10 transition-colors ${
+            isDragging
+              ? "border-primary/40 bg-primary/5"
+              : "border-black/10 hover:border-black/20"
+          }`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
+          <Paperclip className="w-5 h-5 text-on-surface-variant/30 mx-auto mb-3" />
+          <p className="text-sm text-on-surface-variant/50 mb-4">
+            Joignez des documents ou images complémentaires
           </p>
 
-          <form action={publishResource} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Main content */}
-            <div className="lg:col-span-8 space-y-8">
-              {/* Resource Details */}
-              <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm p-8">
-                <h2 className="flex items-center gap-2 text-headline-md text-on-surface mb-6">
-                  <FileEdit className="w-6 h-6 text-primary" />
-                  Détails de la ressource
-                </h2>
-                <div className="space-y-6">
-                  <Input
-                    id="title"
-                    name="title"
-                    label="Titre de la ressource"
-                    placeholder="Entrez un titre descriptif"
-                  />
-                  <Input
-                    id="summary"
-                    name="summary"
-                    label="Résumé (optionnel)"
-                    placeholder="Courte description pour le catalogue..."
-                  />
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-label-md text-on-surface-variant">
-                        Contenu principal
-                      </label>
-                      <div className="flex items-center gap-1 bg-surface-container-high rounded-lg p-0.5">
-                        <button
-                          type="button"
-                          onClick={() => setPreview(false)}
-                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                            !preview
-                              ? "bg-primary text-on-primary-fixed"
-                              : "text-on-surface-variant hover:text-on-surface"
-                          }`}
-                        >
-                          <Pencil className="w-3.5 h-3.5 inline mr-1" />
-                          Éditer
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPreview(true)}
-                          className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                            preview
-                              ? "bg-primary text-on-primary-fixed"
-                              : "text-on-surface-variant hover:text-on-surface"
-                          }`}
-                        >
-                          <Eye className="w-3.5 h-3.5 inline mr-1" />
-                          Aperçu
-                        </button>
-                      </div>
-                    </div>
-                    {preview ? (
-                      <div className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-6 min-h-[300px]">
-                        {content ? (
-                          <MarkdownRenderer content={content} />
-                        ) : (
-                          <p className="text-on-surface-variant text-sm italic">
-                            Aucun contenu à afficher...
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <MarkdownEditor
-                        value={content}
-                        onChange={setContent}
-                        placeholder="Rédigez le contenu de votre ressource en markdown..."
-                        minHeight="300px"
-                      />
-                    )}
-                    <input type="hidden" name="content" value={content} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Media Upload */}
-              <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm p-8">
-                <h2 className="flex items-center gap-2 text-headline-md text-on-surface mb-6">
-                  <CloudUpload className="w-6 h-6 text-primary" />
-                  Ajouter des médias
-                </h2>
-                <div className="border-2 border-dashed border-outline-variant/30 rounded-xl p-8 text-center bg-surface hover:bg-surface-container-low transition-colors cursor-pointer">
-                  <Upload className="w-12 h-12 text-on-surface-variant mb-4 block" />
-                  <p className="text-sm text-on-surface font-semibold mb-1">
-                    Glissez-déposez vos fichiers ici
-                  </p>
-                  <p className="text-xs text-on-surface-variant">
-                    ou cliquez pour parcourir (PDF, images, vidéos — max 50 Mo)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="lg:col-span-4 space-y-6">
-              {/* Classification */}
-              <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm p-6">
-                <h3 className="text-title-md text-on-surface mb-4">
-                  Classification
-                </h3>
-                <div className="space-y-4">
-                  <Select
-                    id="category"
-                    name="categoryId"
-                    label="Catégorie"
-                    options={categories}
-                    placeholder="Choisir une catégorie..."
-                  />
-                  <Select
-                    id="mediaType"
-                    name="mediaType"
-                    label="Type de média"
-                    options={mediaTypes}
-                    defaultValue="article"
-                  />
-                </div>
-              </div>
-
-              {/* Privacy */}
-              <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm p-6">
-                <h3 className="flex items-center gap-2 text-title-md text-on-surface mb-4">
-                  <Shield className="w-5 h-5 text-primary" />
-                  Confidentialité
-                </h3>
-                <div className="space-y-3">
-                  {[
-                    {
-                      value: "public",
-                      label: "Public",
-                      desc: "Visible par tous sur la plateforme.",
-                    },
-                    {
-                      value: "shared",
-                      label: "Partagé avec l'équipe de soins",
-                      desc: "Seuls vos professionnels assignés peuvent voir.",
-                    },
-                    {
-                      value: "private",
-                      label: "Privé",
-                      desc: "Seul vous pouvez accéder à cette ressource.",
-                    },
-                  ].map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-start gap-3 p-3 rounded-lg cursor-pointer has-checked:border-primary/20 has-checked:bg-surface-container-low transition-colors"
-                    >
-                      <input
-                        type="radio"
-                        name="privacy"
-                        value={option.value}
-                        defaultChecked={option.value === "public"}
-                        className="mt-1 accent-primary"
-                      />
-                      <div>
-                        <p className="font-semibold text-sm text-on-surface">
-                          {option.label}
-                        </p>
-                        <p className="text-xs text-on-surface-variant">
-                          {option.desc}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="space-y-3">
-                <Button type="submit" className="w-full" size="lg">
-                  <Send className="w-5 h-5" />
-                  Publier la ressource
-                </Button>
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  className="w-full"
-                  size="lg"
-                  onClick={() => {
-                    const form = document.querySelector("form");
-                    if (form) {
-                      const input = document.createElement("input");
-                      input.type = "hidden";
-                      input.name = "isDraft";
-                      input.value = "true";
-                      form.appendChild(input);
-                    }
-                  }}
+          {uploadedFiles.length > 0 && (
+            <div className="mb-4 space-y-1.5 text-left max-w-xs mx-auto">
+              {uploadedFiles.map((file) => (
+                <div
+                  key={file.url}
+                  className="flex items-center justify-between text-xs text-on-surface-variant bg-surface-container-low rounded-lg px-3 py-1.5"
                 >
-                  Enregistrer comme brouillon
-                </Button>
-              </div>
+                  <span className="truncate max-w-45">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFile(file.url)}
+                    className="ml-2 text-on-surface-variant/50 hover:text-error transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
-          </form>
+          )}
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="inline-flex items-center px-5 py-2 border border-black/15 rounded-lg text-sm text-on-surface hover:bg-black/5 transition-colors disabled:opacity-50"
+          >
+            {isUploading ? "Envoi en cours..." : "Parcourir les fichiers"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf,video/mp4,video/webm,audio/mpeg,audio/mp4,audio/ogg"
+            onChange={handleFileInput}
+            className="sr-only"
+          />
         </div>
-      </main>
+
+        {/* Actions */}
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => handleSubmit(false)}
+            disabled={isSubmitting}
+            className="w-full py-4 bg-primary text-white font-semibold rounded-xl hover:bg-primary-dim transition-colors disabled:opacity-60 text-sm tracking-wide"
+          >
+            {isSubmitting ? "Publication en cours..." : "Publier sur (RE)Sources"}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSubmit(true)}
+            disabled={isSubmitting}
+            className="w-full text-center text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/40 hover:text-on-surface-variant/70 transition-colors py-2"
+          >
+            Enregistrer comme brouillon
+          </button>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="py-8 px-8 border-t border-black/5">
+        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-[11px] text-on-surface-variant/40">
+            © 2024 (RE)Sources Relationnelles. Une initiative officielle de santé publique.
+          </p>
+          <div className="flex items-center gap-6">
+            {[["Confidentialité", "Accessibilité", "Assistance"]].flat().map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="text-[11px] text-on-surface-variant/40 hover:text-on-surface-variant/70 transition-colors"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
