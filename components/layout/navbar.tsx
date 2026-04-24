@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Bell, User, LogOut, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { Search, User, LogOut, LayoutDashboard, ShieldCheck, BookOpen, MessageCircleQuestionMark } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useState, useRef, useEffect } from "react";
 
@@ -58,7 +58,9 @@ export function Navbar() {
             <span className="text-outline">Rechercher...</span>
           </button>
           <button className="relative p-2 text-on-surface-variant hover:text-primary transition-colors" aria-label="Notifications">
-            <Bell className="w-6 h-6" />
+            <Link href="/aide">
+              <MessageCircleQuestionMark className="w-6 h-6" />
+            </Link>
           </button>
 
           {session ? (
@@ -82,7 +84,10 @@ export function Navbar() {
                   <Link href="/tableau-de-bord" className="flex items-center gap-2 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
                     <LayoutDashboard className="w-4 h-4" /> Tableau de bord
                   </Link>
-                  {(session.user as Record<string, unknown>).role === "admin" && (
+                  <Link href="/mes-ressources" className="flex items-center gap-2 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
+                    <BookOpen className="w-4 h-4" /> Mes ressources
+                  </Link>
+                  {(["admin", "super_admin"] as string[]).includes((session.user as Record<string, unknown>).role as string) && (
                     <Link href="/admin/statistiques" className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary font-medium hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
                       <ShieldCheck className="w-4 h-4" /> Administration
                     </Link>

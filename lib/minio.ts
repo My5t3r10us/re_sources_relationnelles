@@ -1,25 +1,41 @@
-import { Client } from "minio";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-let _client: Client | null = null;
+let _client: S3Client | null = null;
 
-export function getMinioClient(): Client {
+export function getMinioClient(): S3Client {
   if (!_client) {
-    _client = new Client({
-      endPoint: process.env.MINIO_ENDPOINT || "localhost",
-      port: parseInt(process.env.MINIO_PORT || "9000"),
-      useSSL: process.env.MINIO_USE_SSL === "true",
-      accessKey: process.env.MINIO_ACCESS_KEY || "",
-      secretKey: process.env.MINIO_SECRET_KEY || "",
+    _client = new S3Client({
+      region: process.env.AWS_REGION ?? "auto",
+      endpoint: process.env.AWS_ENDPOINT_URL_S3 ?? "https://t3.storage.dev",
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+      },
+      forcePathStyle: true,
     });
   }
   return _client;
 }
 
-export const MINIO_BUCKET = process.env.MINIO_BUCKET || "resources";
+export const MINIO_BUCKET = process.env.AWS_BUCKET ?? process.env.MINIO_BUCKET ?? "resources";
 
 export function getMinioPublicUrl(objectName: string): string {
-  const protocol = process.env.MINIO_USE_SSL === "true" ? "https" : "http";
-  const endpoint = process.env.MINIO_ENDPOINT || "localhost";
-  const port = process.env.MINIO_PORT || "9000";
-  return `${protocol}://${endpoint}:${port}/${MINIO_BUCKET}/${objectName}`;
+  const endpoint = process.env.AWS_ENDPOINT_URL_S3 ?? "https://t3.storage.dev";
+  return `${endpoint}/${MINIO_BUCKET}/${objectName}`;
+}
+
+export async function uploadToS3(
+  objectName: string,
+  body: Buffer | Uint8Array,
+  contentType: string
+): Promise<void> {
+  const client = getMinioClient();
+  await client.send(
+    new PutObjectCommand({
+      Bucket: MINIO_BUCKET,
+      Key: objectName,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
 }

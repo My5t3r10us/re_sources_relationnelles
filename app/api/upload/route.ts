@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth-server";
-import { getMinioClient, MINIO_BUCKET, getMinioPublicUrl } from "@/lib/minio";
+import { getPublicUrl, uploadObject } from "@/lib/s3";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -23,21 +23,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  let body: { filename?: string; contentType?: string; size?: number };
+  let formData: FormData;
   try {
-    body = await req.json();
+    formData = await req.formData();
   } catch {
     return NextResponse.json({ error: "Corps invalide" }, { status: 400 });
   }
 
-  const { filename, contentType, size } = body;
-
-  if (!filename || !contentType) {
-    return NextResponse.json(
-      { error: "Paramètres manquants" },
-      { status: 400 }
-    );
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "Fichier manquant" }, { status: 400 });
   }
+
+  const { name: filename, type: contentType, size } = file;
 
   if (!ALLOWED_TYPES.includes(contentType)) {
     return NextResponse.json(
@@ -46,7 +44,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (size && size > MAX_SIZE) {
+  if (size > MAX_SIZE) {
     return NextResponse.json(
       { error: "Fichier trop volumineux (max 50 Mo)" },
       { status: 400 }
@@ -58,20 +56,14 @@ export async function POST(req: NextRequest) {
   const objectName = `${session.user.id}/${crypto.randomUUID()}.${safeExt}`;
 
   try {
-    const client = getMinioClient();
-    // Presigned URL valide 15 minutes
-    const uploadUrl = await client.presignedPutObject(
-      MINIO_BUCKET,
-      objectName,
-      15 * 60
-    );
-    const publicUrl = getMinioPublicUrl(objectName);
-
-    return NextResponse.json({ uploadUrl, publicUrl });
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await uploadObject(objectName, buffer, contentType);
+    const publicUrl = getPublicUrl(objectName);
+    return NextResponse.json({ publicUrl });
   } catch (err) {
-    console.error("MinIO error:", err);
+    console.error("S3 error:", err);
     return NextResponse.json(
-      { error: "Erreur lors de la génération de l'URL d'upload" },
+      { error: "Erreur lors de l'upload du fichier" },
       { status: 500 }
     );
   }

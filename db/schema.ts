@@ -13,6 +13,7 @@ export const userRoleEnum = pgEnum("user_role", [
   "citizen",
   "moderator",
   "admin",
+  "super_admin",
 ]);
 
 export const resourceStatusEnum = pgEnum("resource_status", [
@@ -207,6 +208,28 @@ export const commentLike = pgTable("comment_like", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const savedResource = pgTable("saved_resource", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  resourceId: text("resource_id")
+    .notNull()
+    .references(() => resource.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const resourceFile = pgTable("resource_file", {
+  id: text("id").primaryKey(),
+  resourceId: text("resource_id")
+    .notNull()
+    .references(() => resource.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  name: text("name").notNull(),
+  contentType: text("content_type").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ─── Relations ───
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -214,6 +237,15 @@ export const userRelations = relations(user, ({ many }) => ({
   comments: many(comment),
   favorites: many(favorite),
   completions: many(completion),
+  savedResources: many(savedResource),
+}));
+
+export const savedResourceRelations = relations(savedResource, ({ one }) => ({
+  user: one(user, { fields: [savedResource.userId], references: [user.id] }),
+  resource: one(resource, {
+    fields: [savedResource.resourceId],
+    references: [resource.id],
+  }),
 }));
 
 export const categoryRelations = relations(category, ({ many }) => ({
@@ -229,6 +261,14 @@ export const resourceRelations = relations(resource, ({ one, many }) => ({
   comments: many(comment),
   favorites: many(favorite),
   completions: many(completion),
+  files: many(resourceFile),
+}));
+
+export const resourceFileRelations = relations(resourceFile, ({ one }) => ({
+  resource: one(resource, {
+    fields: [resourceFile.resourceId],
+    references: [resource.id],
+  }),
 }));
 
 export const commentRelations = relations(comment, ({ one, many }) => ({

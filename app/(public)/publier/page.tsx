@@ -2,9 +2,10 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { WysiwygEditor } from "@/components/editor/wysiwyg-editor";
 import { publishResource } from "./publish-actions";
-import { X, Paperclip } from "lucide-react";
+import { X, Paperclip, ImagePlus, Trash2 } from "lucide-react";
 const categories = [
   { value: "", label: "Choisir un chemin..." },
   { value: "anxiete-stress", label: "Anxiété & Stress" },
@@ -31,6 +32,11 @@ interface UploadedFile {
   type: string;
 }
 
+interface CoverImage {
+  url: string;
+  previewUrl: string;
+}
+
 export default function PublierPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -38,11 +44,14 @@ export default function PublierPage() {
   const [mediaType, setMediaType] = useState("article");
   const [privacy, setPrivacy] = useState("public");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [coverImage, setCoverImage] = useState<CoverImage | null>(null);
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const statusLabel: Record<SaveStatus, string> = {
     idle: "Brouillon...",
@@ -53,14 +62,12 @@ export default function PublierPage() {
 
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
     try {
+      const form = new FormData();
+      form.append("file", file);
+
       const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        }),
+        body: form,
       });
 
       if (!res.ok) {
@@ -69,25 +76,43 @@ export default function PublierPage() {
         return null;
       }
 
-      const { uploadUrl, publicUrl } = await res.json();
-
-      const upload = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-
-      if (!upload.ok) {
-        alert("Erreur lors de l'envoi du fichier vers le stockage");
-        return null;
-      }
-
+      const { publicUrl } = await res.json();
       return publicUrl as string;
     } catch {
       alert("Erreur réseau lors de l'upload");
       return null;
     }
   }, []);
+
+  const handleCoverImageSelect = useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith("image/")) {
+        alert("Veuillez sélectionner une image.");
+        return;
+      }
+      setIsCoverUploading(true);
+      const localPreview = URL.createObjectURL(file);
+      const url = await uploadFile(file);
+      if (url) {
+        setCoverImage({ url, previewUrl: localPreview });
+      } else {
+        URL.revokeObjectURL(localPreview);
+      }
+      setIsCoverUploading(false);
+    },
+    [uploadFile]
+  );
+
+  const handleCoverInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleCoverImageSelect(file);
+    e.target.value = "";
+  };
+
+  const handleRemoveCover = () => {
+    if (coverImage) URL.revokeObjectURL(coverImage.previewUrl);
+    setCoverImage(null);
+  };
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -141,9 +166,6 @@ export default function PublierPage() {
     setSaveStatus("saving");
 
     try {
-      const imageUrl =
-        uploadedFiles.find((f) => f.type.startsWith("image/"))?.url ?? null;
-
       await publishResource({
         title: title.trim(),
         content,
@@ -152,7 +174,12 @@ export default function PublierPage() {
         categoryId: categoryId || null,
         privacy: privacy as "public" | "private",
         isDraft,
-        imageUrl,
+        imageUrl: coverImage?.url ?? null,
+        attachments: uploadedFiles.map((f) => ({
+          url: f.url,
+          name: f.name,
+          contentType: f.type,
+        })),
       });
 
       setSaveStatus("saved");
@@ -299,6 +326,54 @@ export default function PublierPage() {
           </select>
         </div>
 
+        {/* Cover image */}
+        <div className="mb-10">
+          <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+            Image de couverture
+          </label>
+          {coverImage ? (
+            <div className="relative rounded-xl overflow-hidden border border-black/10 aspect-16/6">
+              <Image
+                src={coverImage.previewUrl}
+                alt="Couverture"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+              <button
+                type="button"
+                onClick={handleRemoveCover}
+                className="absolute top-3 right-3 p-1.5 bg-black/50 hover:bg-black/70 rounded-lg transition-colors text-white"
+                title="Supprimer l'image de couverture"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={isCoverUploading}
+              className="w-full border-2 border-dashed border-black/10 hover:border-primary/30 rounded-xl py-8 flex flex-col items-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <ImagePlus className="w-5 h-5 text-on-surface-variant/30" />
+              <span className="text-sm text-on-surface-variant/50">
+                {isCoverUploading ? "Chargement..." : "Ajouter une image de couverture"}
+              </span>
+              <span className="text-xs text-on-surface-variant/30">
+                JPG, PNG, WebP — recommandé 1200×400 px
+              </span>
+            </button>
+          )}
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={handleCoverInputChange}
+            className="sr-only"
+          />
+        </div>
+
         {/* File upload */}
         <div
           className={`border-2 border-dashed rounded-xl p-10 text-center mb-10 transition-colors ${
@@ -312,7 +387,7 @@ export default function PublierPage() {
         >
           <Paperclip className="w-5 h-5 text-on-surface-variant/30 mx-auto mb-3" />
           <p className="text-sm text-on-surface-variant/50 mb-4">
-            Joignez des documents ou images complémentaires
+            Joignez des documents, vidéos ou fichiers audio
           </p>
 
           {uploadedFiles.length > 0 && (

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SidebarAdmin } from "@/components/layout/sidebar-admin";
-import { Search, Bell, Settings } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getServerSession } from "@/lib/auth-server";
 import { db } from "@/db";
 import { user } from "@/db/schema";
@@ -21,7 +21,7 @@ export default async function AdminLayout({
     .where(eq(user.id, session.user.id))
     .limit(1);
 
-  if (!dbUser || dbUser.role !== "admin") redirect("/");
+  if (!dbUser || (dbUser.role !== "admin" && dbUser.role !== "super_admin")) redirect("/");
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -35,24 +35,17 @@ export default async function AdminLayout({
           >
             (RE)Sources Admin
           </Link>
-          <div className="flex items-center gap-2 flex-1 max-w-md mx-8">
-            <div className="flex items-center bg-surface-container-high rounded-xl px-4 py-2 flex-1">
-              <Search className="w-5 h-5 text-on-surface-variant mr-2" />
-              <input
-                type="text"
-                placeholder="Rechercher..."
-                className="bg-transparent border-none focus:outline-none text-sm text-on-surface placeholder:text-outline flex-1"
-              />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Retour à l&apos;app
+            </Link>
+            <div className="w-10 h-10 rounded-full bg-primary text-on-primary-fixed flex items-center justify-center font-semibold text-sm">
+              {session.user.name?.charAt(0).toUpperCase() ?? "U"}
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-on-surface-variant hover:text-primary transition-colors" aria-label="Notifications">
-              <Bell className="w-6 h-6" />
-            </button>
-            <button className="p-2 text-on-surface-variant hover:text-primary transition-colors" aria-label="Paramètres">
-              <Settings className="w-6 h-6" />
-            </button>
-            <div className="w-10 h-10 rounded-full bg-surface-container-high" />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto bg-surface">{children}</main>

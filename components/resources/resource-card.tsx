@@ -42,13 +42,12 @@ export function ResourceCard({
   imageUrl,
   readingTime,
   actionLabel,
-  actionHref,
 }: ResourceCardProps) {
   return (
     <Link href={`/ressource/${id}`} className="block group">
       <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm hover:shadow-ambient hover:-translate-y-1 transition-all overflow-hidden h-full flex flex-col">
         {imageUrl && (
-          <div className="relative aspect-[4/3] overflow-hidden">
+          <div className="relative aspect-4/3 overflow-hidden">
             <div className="w-full h-full bg-surface-container-high" />
             {categoryName && (
               <div className="absolute top-3 left-3">

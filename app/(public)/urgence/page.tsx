@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Phone, AlertTriangle, Shield, Clock, ArrowRight, ExternalLink, Heart, MessageCircle } from "lucide-react";
+import { Phone, AlertTriangle, Shield, Clock, ArrowRight, Heart, MessageCircle } from "lucide-react";
 
 const emergencyContacts = [
   {

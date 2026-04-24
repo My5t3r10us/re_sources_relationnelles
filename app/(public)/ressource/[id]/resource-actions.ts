@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { favorite, completion } from "@/db/schema";
+import { favorite, completion, savedResource } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
@@ -61,4 +61,33 @@ export async function markAsRead(resourceId: string) {
 
   revalidatePath(`/ressource/${resourceId}`);
   return { success: true, alreadyRead: false };
+}
+
+export async function toggleSaved(resourceId: string) {
+  const user = await requireAuth();
+
+  const [existing] = await db
+    .select({ id: savedResource.id })
+    .from(savedResource)
+    .where(
+      and(
+        eq(savedResource.userId, user.id),
+        eq(savedResource.resourceId, resourceId)
+      )
+    )
+    .limit(1);
+
+  if (existing) {
+    await db.delete(savedResource).where(eq(savedResource.id, existing.id));
+  } else {
+    await db.insert(savedResource).values({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      resourceId,
+    });
+  }
+
+  revalidatePath(`/ressource/${resourceId}`);
+  revalidatePath("/tableau-de-bord");
+  return { success: true, isSaved: !existing };
 }

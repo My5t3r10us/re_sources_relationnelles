@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { resource, user, comment, report } from "@/db/schema";
+import { resource, user, comment, report, category } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
@@ -16,8 +16,24 @@ async function requireAdmin() {
     .where(eq(user.id, session.user.id))
     .limit(1);
 
-  if (!dbUser || dbUser.role !== "admin") {
+  if (!dbUser || (dbUser.role !== "admin" && dbUser.role !== "super_admin")) {
     throw new Error("Accès refusé");
+  }
+  return session.user;
+}
+
+async function requireSuperAdmin() {
+  const session = await getServerSession();
+  if (!session?.user) throw new Error("Non authentifié");
+
+  const [dbUser] = await db
+    .select({ role: user.role })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+    .limit(1);
+
+  if (!dbUser || dbUser.role !== "super_admin") {
+    throw new Error("Accès réservé au super-administrateur");
   }
   return session.user;
 }
@@ -99,3 +115,128 @@ export async function resolveReport(reportId: string) {
     .where(eq(report.id, reportId));
   revalidatePath("/admin/moderation");
 }
+
+// ─── Resource admin actions ───
+
+export async function deleteResource(resourceId: string) {
+  await requireAdmin();
+  await db.delete(resource).where(eq(resource.id, resourceId));
+  revalidatePath("/admin/ressources");
+  revalidatePath("/catalogue");
+}
+
+export async function toggleFeaturedResource(resourceId: string, featured: boolean) {
+  await requireAdmin();
+  await db
+    .update(resource)
+    .set({ featured, updatedAt: new Date() })
+    .where(eq(resource.id, resourceId));
+  revalidatePath("/admin/ressources");
+  revalidatePath("/catalogue");
+}
+
+// ─── Category actions ───
+
+export async function createCategory(data: {
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+}) {
+  await requireAdmin();
+  await db.insert(category).values({
+    id: crypto.randomUUID(),
+    name: data.name,
+    slug: data.slug,
+    description: data.description ?? null,
+    icon: data.icon ?? null,
+  });
+  revalidatePath("/admin/categories");
+  revalidatePath("/catalogue");
+  revalidatePath("/publier");
+}
+
+export async function updateCategory(
+  categoryId: string,
+  data: { name: string; slug: string; description?: string; icon?: string }
+) {
+  await requireAdmin();
+  await db
+    .update(category)
+    .set({
+      name: data.name,
+      slug: data.slug,
+      description: data.description ?? null,
+      icon: data.icon ?? null,
+    })
+    .where(eq(category.id, categoryId));
+  revalidatePath("/admin/categories");
+  revalidatePath("/catalogue");
+}
+
+export async function deleteCategory(categoryId: string) {
+  await requireAdmin();
+  await db.delete(category).where(eq(category.id, categoryId));
+  revalidatePath("/admin/categories");
+  revalidatePath("/catalogue");
+}
+
+// ─── Super-admin: account management ───
+
+export async function createAdminUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  role: "moderator" | "admin" | "super_admin";
+}) {
+  await requireSuperAdmin();
+
+  // Check if email already exists
+  const [existing] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, data.email))
+    .limit(1);
+  if (existing) throw new Error("Cet email est déjà utilisé");
+
+  // Hash password using better-auth compatible hash
+  const { hashPassword } = await import("better-auth/crypto");
+  const hashedPassword = await hashPassword(data.password);
+
+  const userId = crypto.randomUUID();
+  await db.insert(user).values({
+    id: userId,
+    name: data.name,
+    email: data.email,
+    emailVerified: true,
+    role: data.role,
+    active: true,
+  });
+
+  // Insert account with hashed password for email/password auth
+  const { account } = await import("@/db/schema");
+  await db.insert(account).values({
+    id: crypto.randomUUID(),
+    accountId: userId,
+    providerId: "credential",
+    userId,
+    password: hashedPassword,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  revalidatePath("/admin/utilisateurs");
+}
+
+export async function updateUserRoleAsAdmin(
+  userId: string,
+  role: "citizen" | "moderator" | "admin" | "super_admin"
+) {
+  await requireSuperAdmin();
+  await db
+    .update(user)
+    .set({ role, updatedAt: new Date() })
+    .where(eq(user.id, userId));
+  revalidatePath("/admin/utilisateurs");
+}
+

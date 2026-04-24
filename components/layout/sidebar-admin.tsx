@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, BarChart3, Gavel, Users, HelpCircle } from "lucide-react";
+import { Plus, BarChart3, Gavel, Users, HelpCircle, BookOpen, Tag } from "lucide-react";
 
 const adminNav = [
   { href: "/admin/statistiques", label: "Statistiques", icon: <BarChart3 className="w-5 h-5" /> },
   { href: "/admin/moderation", label: "Modération", icon: <Gavel className="w-5 h-5" /> },
+  { href: "/admin/ressources", label: "Ressources", icon: <BookOpen className="w-5 h-5" /> },
+  { href: "/admin/categories", label: "Catégories", icon: <Tag className="w-5 h-5" /> },
   { href: "/admin/utilisateurs", label: "Comptes utilisateurs", icon: <Users className="w-5 h-5" /> },
 ];
 

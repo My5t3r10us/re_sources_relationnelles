@@ -13,7 +13,7 @@ import {
   Quote,
   Code,
   Link,
-  Image,
+  Image as ImageIcon,
   Minus,
   Table,
   CheckSquare,
@@ -165,7 +165,7 @@ const toolbarItems: ToolbarItem[] = [
     },
   },
   {
-    icon: <Image className="w-4 h-4" />,
+    icon: <ImageIcon className="w-4 h-4" />,
     label: "Image",
     action: (ta) => {
       const start = ta.selectionStart;

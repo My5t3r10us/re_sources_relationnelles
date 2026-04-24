@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Flag, ShieldAlert, MessageSquare, FileText } from "lucide-react";
 import { db } from "@/db";
 import { resource, comment, report, user, category } from "@/db/schema";
-import { eq, and, count, desc } from "drizzle-orm";
+import { eq, count, desc } from "drizzle-orm";
 import {
   ApproveResourceButton,
   RejectResourceButton,
@@ -11,6 +11,15 @@ import {
   HideCommentButton,
   ResolveReportButton,
 } from "./moderation-actions";
+
+function timeAgo(date: Date) {
+  const diff = Date.now() - date.getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return "il y a moins d'1h";
+  if (hours < 24) return `il y a ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `il y a ${days}j`;
+}
 
 export default async function ModerationPage() {
   const [
@@ -99,15 +108,6 @@ export default async function ModerationPage() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  }
-
-  function timeAgo(date: Date) {
-    const diff = Date.now() - date.getTime();
-    const hours = Math.floor(diff / 3600000);
-    if (hours < 1) return "il y a moins d'1h";
-    if (hours < 24) return `il y a ${hours}h`;
-    const days = Math.floor(hours / 24);
-    return `il y a ${days}j`;
   }
 
   const reasonLabels: Record<string, string> = {

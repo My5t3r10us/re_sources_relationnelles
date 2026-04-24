@@ -1,27 +1,49 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Pencil, Ban, CheckCircle, ShieldCheck, Shield, UserRound } from "lucide-react";
-import { updateUserRole, toggleUserActive } from "../actions";
+import { Pencil, Ban, CheckCircle, ShieldCheck, Shield, UserRound, Crown } from "lucide-react";
+import { updateUserRole, toggleUserActive, updateUserRoleAsAdmin } from "../actions";
 import { useTransition, useState } from "react";
 
 export function UserActions({
   userId,
   currentRole,
   isActive,
+  viewerRole,
 }: {
   userId: string;
   currentRole: string;
   isActive: boolean;
+  viewerRole: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
-  const roles = [
-    { value: "citizen", label: "Citoyen", icon: <UserRound className="w-4 h-4" /> },
-    { value: "moderator", label: "Modérateur", icon: <Shield className="w-4 h-4" /> },
-    { value: "admin", label: "Admin", icon: <ShieldCheck className="w-4 h-4" /> },
-  ] as const;
+  const isSuperAdmin = viewerRole === "super_admin";
+
+  const roles = isSuperAdmin
+    ? ([
+        { value: "citizen", label: "Citoyen", icon: <UserRound className="w-4 h-4" /> },
+        { value: "moderator", label: "Modérateur", icon: <Shield className="w-4 h-4" /> },
+        { value: "admin", label: "Admin", icon: <ShieldCheck className="w-4 h-4" /> },
+        { value: "super_admin", label: "Super-Admin", icon: <Crown className="w-4 h-4" /> },
+      ] as const)
+    : ([
+        { value: "citizen", label: "Citoyen", icon: <UserRound className="w-4 h-4" /> },
+        { value: "moderator", label: "Modérateur", icon: <Shield className="w-4 h-4" /> },
+        { value: "admin", label: "Admin", icon: <ShieldCheck className="w-4 h-4" /> },
+      ] as const);
+
+  const handleRoleChange = (role: string) => {
+    setShowRoleMenu(false);
+    startTransition(() => {
+      if (isSuperAdmin) {
+        updateUserRoleAsAdmin(userId, role as "citizen" | "moderator" | "admin" | "super_admin");
+      } else {
+        updateUserRole(userId, role as "citizen" | "moderator" | "admin");
+      }
+    });
+  };
 
   return (
     <div className="flex items-center gap-2 relative">
@@ -35,7 +57,7 @@ export function UserActions({
           <Pencil className="w-5 h-5" />
         </button>
         {showRoleMenu && (
-          <div className="absolute right-0 top-full mt-1 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/20 py-1 z-50 min-w-[160px]">
+          <div className="absolute right-0 top-full mt-1 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/20 py-1 z-50 min-w-40">
             {roles.map((role) => (
               <button
                 key={role.value}
@@ -45,12 +67,7 @@ export function UserActions({
                     ? "text-primary font-semibold bg-primary/5"
                     : "text-on-surface hover:bg-surface-container-high"
                 }`}
-                onClick={() => {
-                  setShowRoleMenu(false);
-                  startTransition(() =>
-                    updateUserRole(userId, role.value as "citizen" | "moderator" | "admin")
-                  );
-                }}
+                onClick={() => handleRoleChange(role.value)}
               >
                 {role.icon}
                 {role.label}

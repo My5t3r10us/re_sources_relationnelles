@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
@@ -13,13 +12,15 @@ import {
   ShieldAlert,
   Eye,
   Calendar,
+  Pencil,
 } from "lucide-react";
+import Link from "next/link";
 import { db } from "@/db";
-import { resource, user, category, comment, commentLike, favorite, completion } from "@/db/schema";
+import { resource, user, category, comment, commentLike, favorite, completion, savedResource } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { CommentSection } from "./comment-section";
-import { FavoriteButton, ReadTracker } from "./resource-client";
+import { FavoriteButton, ReadTracker, SaveButton, ShareButton } from "./resource-client";
 
 const mediaTypeLabels: Record<string, string> = {
   article: "Article",
@@ -99,8 +100,9 @@ export default async function RessourcePage({ params }: PageProps) {
 
   let likedCommentIds: string[] = [];
   let isFavorite = false;
+  let isSaved = false;
   if (session?.user) {
-    const [liked, fav] = await Promise.all([
+    const [liked, fav, saved] = await Promise.all([
       db
         .select({ commentId: commentLike.commentId })
         .from(commentLike)
@@ -115,9 +117,20 @@ export default async function RessourcePage({ params }: PageProps) {
           )
         )
         .limit(1),
+      db
+        .select({ id: savedResource.id })
+        .from(savedResource)
+        .where(
+          and(
+            eq(savedResource.userId, session.user.id),
+            eq(savedResource.resourceId, id)
+          )
+        )
+        .limit(1),
     ]);
     likedCommentIds = liked.map((l) => l.commentId);
     isFavorite = fav.length > 0;
+    isSaved = saved.length > 0;
   }
 
   const formattedDate = res.createdAt.toLocaleDateString("fr-FR", {
@@ -192,7 +205,22 @@ export default async function RessourcePage({ params }: PageProps) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-3 ml-auto flex-wrap">
+            {session?.user && res.authorId === session.user.id && (
+              <Link
+                href={`/ressource/${res.id}/modifier`}
+                className="rounded-xl px-5 py-2.5 text-sm font-semibold inline-flex items-center gap-2 bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+                Modifier
+              </Link>
+            )}
+            <ShareButton title={res.title} />
+            <SaveButton
+              resourceId={res.id}
+              isSaved={isSaved}
+              isAuthenticated={!!session?.user}
+            />
             <FavoriteButton
               resourceId={res.id}
               isFavorite={isFavorite}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Reply, Trash2, Send, Loader2 } from "lucide-react";
 import { addComment, deleteComment, likeComment } from "./comment-actions";
@@ -47,9 +48,11 @@ function Avatar({
   const sizeClasses = size === "sm" ? "w-8 h-8 text-[10px]" : "w-10 h-10 text-xs";
   if (image) {
     return (
-      <img
+      <Image
         src={image}
         alt={name}
+        width={size === "sm" ? 32 : 40}
+        height={size === "sm" ? 32 : 40}
         className={`${sizeClasses} rounded-full object-cover shrink-0`}
       />
     );
@@ -114,7 +117,7 @@ function CommentForm({
           placeholder={placeholder}
           autoFocus={autoFocus}
           maxLength={2000}
-          className={`w-full bg-surface-container-lowest rounded-xl px-4 py-3 text-sm text-on-surface placeholder:text-outline border-none focus:ring-2 focus:ring-primary/20 focus:outline-none resize-none ${compact ? "min-h-[60px]" : "min-h-[80px]"}`}
+          className={`w-full bg-surface-container-lowest rounded-xl px-4 py-3 text-sm text-on-surface placeholder:text-outline border-none focus:ring-2 focus:ring-primary/20 focus:outline-none resize-none ${compact ? "min-h-15" : "min-h-20"}`}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
@@ -237,7 +240,7 @@ function CommentItem({
             </button>
           )}
         </div>
-        <p className="text-sm text-on-surface-variant mb-2 whitespace-pre-wrap break-words">
+        <p className="text-sm text-on-surface-variant mb-2 whitespace-pre-wrap wrap-break-word">
           {comment.content}
         </p>
         <div className="flex items-center gap-4 text-sm text-on-surface-variant">
@@ -325,7 +328,7 @@ function CommentItem({
                       </button>
                     )}
                   </div>
-                  <p className="text-sm text-on-surface-variant whitespace-pre-wrap break-words">
+                  <p className="text-sm text-on-surface-variant whitespace-pre-wrap wrap-break-word">
                     {reply.content}
                   </p>
                   <div className="flex items-center gap-4 text-sm text-on-surface-variant mt-1">

@@ -6,11 +6,13 @@ import { user } from "@/db/schema";
 import { eq, count, desc, ilike, and, SQL } from "drizzle-orm";
 import Link from "next/link";
 import { UserActions } from "./user-actions";
+import { getServerSession } from "@/lib/auth-server";
 
 const ITEMS_PER_PAGE = 10;
 
 const roleConfig = {
   admin: { label: "Admin", variant: "primary" as const },
+  super_admin: { label: "Super-Admin", variant: "primary" as const },
   moderator: { label: "Modérateur", variant: "secondary" as const },
   citizen: { label: "Citoyen", variant: "outline" as const },
 };
@@ -34,10 +36,17 @@ export default async function UtilisateursPage({ searchParams }: PageProps) {
   const search = params.q ?? "";
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
 
+  const session = await getServerSession();
+  let viewerRole = "admin";
+  if (session?.user) {
+    const [viewer] = await db.select({ role: user.role }).from(user).where(eq(user.id, session.user.id)).limit(1);
+    viewerRole = viewer?.role ?? "admin";
+  }
+
   // Build conditions
   const conditions: SQL[] = [];
-  if (roleFilter && ["admin", "moderator", "citizen"].includes(roleFilter)) {
-    conditions.push(eq(user.role, roleFilter as "admin" | "moderator" | "citizen"));
+  if (roleFilter && ["admin", "super_admin", "moderator", "citizen"].includes(roleFilter)) {
+    conditions.push(eq(user.role, roleFilter as "admin" | "super_admin" | "moderator" | "citizen"));
   }
   if (search) {
     conditions.push(ilike(user.name, `%${search}%`));
@@ -67,6 +76,7 @@ export default async function UtilisateursPage({ searchParams }: PageProps) {
 
   const roleFilters = [
     { value: "", label: "Tous" },
+    { value: "super_admin", label: "Super-Admin" },
     { value: "admin", label: "Admin" },
     { value: "moderator", label: "Modérateur" },
     { value: "citizen", label: "Citoyen" },
@@ -152,7 +162,7 @@ export default async function UtilisateursPage({ searchParams }: PageProps) {
                 </Badge>
 
                 {/* Status */}
-                <div className="text-right min-w-[140px]">
+                <div className="text-right min-w-35">
                   <Badge variant={statusConfig[status].variant}>
                     {statusConfig[status].label}
                   </Badge>
@@ -163,7 +173,7 @@ export default async function UtilisateursPage({ searchParams }: PageProps) {
 
                 {/* Actions */}
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  <UserActions userId={u.id} currentRole={u.role} isActive={u.active} />
+                  <UserActions userId={u.id} currentRole={u.role} isActive={u.active} viewerRole={viewerRole} />
                 </div>
               </div>
             );

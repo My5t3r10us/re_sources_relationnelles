@@ -205,8 +205,8 @@ export function CatalogueClient({
                 className="group col-span-1 md:col-span-2"
               >
                 <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm hover:shadow-ambient transition-all overflow-hidden flex flex-col md:flex-row h-full">
-                  <div className="relative md:w-2/5 aspect-[4/3] md:aspect-auto overflow-hidden">
-                    <div className="w-full h-full bg-surface-container-high min-h-[200px]" />
+                  <div className="relative md:w-2/5 aspect-4/3 md:aspect-auto overflow-hidden">
+                    <div className="w-full h-full bg-surface-container-high min-h-50" />
                     <div className="absolute top-3 left-3">
                       <Badge variant="primary">
                         <Sparkles className="w-3.5 h-3.5" />
