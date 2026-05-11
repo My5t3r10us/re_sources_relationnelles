@@ -1,20 +1,7 @@
-import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "(RE)Sources Relationnelles",
-  description:
-    "Plateforme collaborative de ressources pour le bien-être relationnel et la santé mentale.",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="fr" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
-  );
+// Minimal root layout — html/body are provided by app/[locale]/layout.tsx
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }

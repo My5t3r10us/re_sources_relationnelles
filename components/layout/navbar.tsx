@@ -5,19 +5,22 @@ import { usePathname } from "next/navigation";
 import { Search, User, LogOut, LayoutDashboard, ShieldCheck, BookOpen, MessageCircleQuestionMark } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useState, useRef, useEffect } from "react";
-
-const navItems = [
-  { href: "/catalogue", label: "Catalogue" },
-  { href: "/bien-etre", label: "Bien-être" },
-  { href: "/communaute", label: "Communauté" },
-  { href: "/urgence", label: "Urgence" },
-];
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "./language-switcher";
 
 export function Navbar() {
   const pathname = usePathname();
   const { data: session } = authClient.useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("Nav");
+
+  const navItems = [
+    { href: "/catalogue", label: t("catalogue") },
+    { href: "/bien-etre", label: t("wellness") },
+    { href: "/communaute", label: t("community") },
+    { href: "/urgence", label: t("emergency") },
+  ];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -42,7 +45,7 @@ export function Navbar() {
               key={item.href}
               href={item.href}
               className={`text-sm font-medium transition-colors ${
-                pathname.startsWith(item.href)
+                pathname.includes(item.href)
                   ? "text-primary border-b-2 border-primary pb-0.5"
                   : "text-on-surface-variant hover:text-primary"
               }`}
@@ -52,12 +55,21 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-4">
-          <button className="hidden md:flex items-center gap-2 bg-surface-container-high rounded-xl px-4 py-2 text-sm text-on-surface-variant" aria-label="Rechercher">
+        <div className="flex items-center gap-2">
+          <button
+            className="hidden md:flex items-center gap-2 bg-surface-container-high rounded-xl px-4 py-2 text-sm text-on-surface-variant"
+            aria-label={t("searchLabel")}
+          >
             <Search className="w-5 h-5" />
-            <span className="text-outline">Rechercher...</span>
+            <span className="text-outline">{t("searchPlaceholder")}</span>
           </button>
-          <button className="relative p-2 text-on-surface-variant hover:text-primary transition-colors" aria-label="Notifications">
+
+          <LanguageSwitcher />
+
+          <button
+            className="relative p-2 text-on-surface-variant hover:text-primary transition-colors"
+            aria-label={t("notificationsLabel")}
+          >
             <Link href="/aide">
               <MessageCircleQuestionMark className="w-6 h-6" />
             </Link>
@@ -68,7 +80,7 @@ export function Navbar() {
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="w-10 h-10 rounded-full bg-primary text-on-primary-fixed flex items-center justify-center font-semibold text-sm"
-                aria-label="Mon compte"
+                aria-label={t("myAccount")}
               >
                 {session.user.name?.charAt(0).toUpperCase() ?? "U"}
               </button>
@@ -79,17 +91,17 @@ export function Navbar() {
                     <p className="text-xs text-on-surface-variant truncate">{session.user.email}</p>
                   </div>
                   <Link href="/profil" className="flex items-center gap-2 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
-                    <User className="w-4 h-4" /> Mon profil
+                    <User className="w-4 h-4" /> {t("myProfile")}
                   </Link>
                   <Link href="/tableau-de-bord" className="flex items-center gap-2 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
-                    <LayoutDashboard className="w-4 h-4" /> Tableau de bord
+                    <LayoutDashboard className="w-4 h-4" /> {t("dashboard")}
                   </Link>
                   <Link href="/mes-ressources" className="flex items-center gap-2 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
-                    <BookOpen className="w-4 h-4" /> Mes ressources
+                    <BookOpen className="w-4 h-4" /> {t("myResources")}
                   </Link>
                   {(["admin", "super_admin"] as string[]).includes((session.user as Record<string, unknown>).role as string) && (
                     <Link href="/admin/statistiques" className="flex items-center gap-2 px-4 py-2.5 text-sm text-primary font-medium hover:bg-surface-container-high transition-colors" onClick={() => setMenuOpen(false)}>
-                      <ShieldCheck className="w-4 h-4" /> Administration
+                      <ShieldCheck className="w-4 h-4" /> {t("administration")}
                     </Link>
                   )}
                   <button
@@ -100,7 +112,7 @@ export function Navbar() {
                     }}
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-error hover:bg-surface-container-high transition-colors"
                   >
-                    <LogOut className="w-4 h-4" /> Déconnexion
+                    <LogOut className="w-4 h-4" /> {t("logout")}
                   </button>
                 </div>
               )}
@@ -109,7 +121,7 @@ export function Navbar() {
             <Link
               href="/login"
               className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-colors"
-              aria-label="Mon compte"
+              aria-label={t("login")}
             >
               <User className="w-6 h-6" />
             </Link>

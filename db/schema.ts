@@ -138,6 +138,7 @@ export const resource = pgTable("resource", {
   readingTime: integer("reading_time"),
   featured: boolean("featured").notNull().default(false),
   viewCount: integer("view_count").notNull().default(0),
+  region: text("region"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
