@@ -114,6 +114,7 @@ export async function resolveReport(reportId: string) {
     .set({ resolved: true })
     .where(eq(report.id, reportId));
   revalidatePath("/admin/moderation");
+  revalidatePath("/admin/signalements");
 }
 
 // ─── Resource admin actions ───

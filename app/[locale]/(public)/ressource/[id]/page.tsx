@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import {
@@ -83,9 +83,6 @@ export default async function RessourcePage({ params }: PageProps) {
   // Enforce privacy access control
   if (res.privacy === "private" && session?.user?.id !== res.authorId) {
     notFound();
-  }
-  if (res.privacy === "shared" && !session?.user) {
-    redirect(`/login?callbackUrl=${encodeURIComponent("/ressource/" + id)}`);
   }
 
   // Increment view count

@@ -6,7 +6,7 @@ export interface ApiResponse<T> {
 
 export type UserRole = 'citizen' | 'moderator' | 'admin' | 'super_admin';
 export type ResourceStatus = 'draft' | 'pending' | 'published' | 'rejected' | 'flagged';
-export type ResourcePrivacy = 'public' | 'shared' | 'private';
+export type ResourcePrivacy = 'public' | 'private';
 export type MediaType = 'article' | 'video' | 'pdf' | 'exercise' | 'audio' | 'protocol';
 export type CommentStatus = 'visible' | 'hidden' | 'flagged';
 export type ReportReason = 'harassment' | 'spam' | 'misinformation' | 'inappropriate' | 'other';
