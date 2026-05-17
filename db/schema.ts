@@ -53,6 +53,8 @@ export const reportReasonEnum = pgEnum("report_reason", [
   "other",
 ]);
 
+export const sessionStatusEnum = pgEnum("session_status", ["active", "ended"]);
+
 // ─── Auth tables (better-auth) ───
 
 export const user = pgTable("user", {
@@ -231,6 +233,46 @@ export const resourceFile = pgTable("resource_file", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// ─── Collaborative sessions ───
+
+export const resourceSession = pgTable("resource_session", {
+  id: text("id").primaryKey(),
+  resourceId: text("resource_id")
+    .notNull()
+    .references(() => resource.id, { onDelete: "cascade" }),
+  hostId: text("host_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  shareCode: text("share_code").notNull().unique(),
+  status: sessionStatusEnum("status").notNull().default("active"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endedAt: timestamp("ended_at"),
+});
+
+export const sessionParticipant = pgTable("session_participant", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id")
+    .notNull()
+    .references(() => resourceSession.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  leftAt: timestamp("left_at"),
+});
+
+export const sessionMessage = pgTable("session_message", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id")
+    .notNull()
+    .references(() => resourceSession.id, { onDelete: "cascade" }),
+  authorId: text("author_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ─── Relations ───
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -303,4 +345,30 @@ export const completionRelations = relations(completion, ({ one }) => ({
     fields: [completion.resourceId],
     references: [resource.id],
   }),
+}));
+
+export const resourceSessionRelations = relations(resourceSession, ({ one, many }) => ({
+  resource: one(resource, {
+    fields: [resourceSession.resourceId],
+    references: [resource.id],
+  }),
+  host: one(user, { fields: [resourceSession.hostId], references: [user.id] }),
+  participants: many(sessionParticipant),
+  messages: many(sessionMessage),
+}));
+
+export const sessionParticipantRelations = relations(sessionParticipant, ({ one }) => ({
+  session: one(resourceSession, {
+    fields: [sessionParticipant.sessionId],
+    references: [resourceSession.id],
+  }),
+  user: one(user, { fields: [sessionParticipant.userId], references: [user.id] }),
+}));
+
+export const sessionMessageRelations = relations(sessionMessage, ({ one }) => ({
+  session: one(resourceSession, {
+    fields: [sessionMessage.sessionId],
+    references: [resourceSession.id],
+  }),
+  author: one(user, { fields: [sessionMessage.authorId], references: [user.id] }),
 }));

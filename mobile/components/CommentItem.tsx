@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ReportButton } from './ReportButton';
 import type { Comment } from '@/types/api';
 
 interface CommentItemProps {
@@ -58,10 +59,12 @@ export function CommentItem({ comment, currentUserId, onLike, onDelete, isLiked 
             )}
           </TouchableOpacity>
 
-          {isOwner && (
+          {isOwner ? (
             <TouchableOpacity onPress={() => onDelete(comment.id)} hitSlop={8}>
               <Ionicons name="trash-outline" size={14} color="#9ca3af" />
             </TouchableOpacity>
+          ) : (
+            currentUserId && <ReportButton commentId={comment.id} compact />
           )}
         </View>
       </View>

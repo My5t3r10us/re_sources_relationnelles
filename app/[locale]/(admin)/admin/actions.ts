@@ -190,42 +190,13 @@ export async function createAdminUser(data: {
   role: "moderator" | "admin" | "super_admin";
 }) {
   await requireSuperAdmin();
-
-  // Check if email already exists
-  const [existing] = await db
-    .select({ id: user.id })
-    .from(user)
-    .where(eq(user.email, data.email))
-    .limit(1);
-  if (existing) throw new Error("Cet email est déjà utilisé");
-
-  // Hash password using better-auth compatible hash
-  const { hashPassword } = await import("better-auth/crypto");
-  const hashedPassword = await hashPassword(data.password);
-
-  const userId = crypto.randomUUID();
-  await db.insert(user).values({
-    id: userId,
-    name: data.name,
-    email: data.email,
-    emailVerified: true,
-    role: data.role,
-    active: true,
-  });
-
-  // Insert account with hashed password for email/password auth
-  const { account } = await import("@/db/schema");
-  await db.insert(account).values({
-    id: crypto.randomUUID(),
-    accountId: userId,
-    providerId: "credential",
-    userId,
-    password: hashedPassword,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-
+  const { createAdminUserCore } = await import("@/lib/admin-user");
+  const result = await createAdminUserCore(data);
+  if ("error" in result) {
+    throw new Error(result.error.message);
+  }
   revalidatePath("/admin/utilisateurs");
+  return { id: result.id };
 }
 
 export async function updateUserRoleAsAdmin(

@@ -50,6 +50,13 @@
       "when": 1777042235309,
       "tag": "0006_amazing_blacklash",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779035943808,
+      "tag": "0007_daffy_wasp",
+      "breakpoints": true
     }
   ]
 }

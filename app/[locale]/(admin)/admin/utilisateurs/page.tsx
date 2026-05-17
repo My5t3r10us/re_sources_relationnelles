@@ -6,6 +6,7 @@ import { user } from "@/db/schema";
 import { eq, count, desc, ilike, and, SQL } from "drizzle-orm";
 import Link from "next/link";
 import { UserActions } from "./user-actions";
+import { CreateUserModal } from "./create-user-modal";
 import { getServerSession } from "@/lib/auth-server";
 
 const ITEMS_PER_PAGE = 10;
@@ -85,13 +86,18 @@ export default async function UtilisateursPage({ searchParams }: PageProps) {
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       {/* Header */}
-      <h1 className="text-display-lg text-on-surface mb-2">
-        Comptes utilisateurs
-      </h1>
-      <p className="text-lg text-on-surface-variant mb-8">
-        Gérez l&apos;accès des utilisateurs, assignez les rôles et surveillez le
-        statut des comptes sur la plateforme.
-      </p>
+      <div className="flex items-start justify-between mb-2 gap-4 flex-wrap">
+        <div>
+          <h1 className="text-display-lg text-on-surface mb-2">
+            Comptes utilisateurs
+          </h1>
+          <p className="text-lg text-on-surface-variant mb-8">
+            Gérez l&apos;accès des utilisateurs, assignez les rôles et surveillez le
+            statut des comptes sur la plateforme.
+          </p>
+        </div>
+        {viewerRole === "super_admin" && <CreateUserModal />}
+      </div>
 
       {/* Filters */}
       <div className="flex items-center justify-between mb-8">

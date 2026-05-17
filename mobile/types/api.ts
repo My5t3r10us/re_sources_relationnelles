@@ -9,6 +9,8 @@ export type ResourceStatus = 'draft' | 'pending' | 'published' | 'rejected' | 'f
 export type ResourcePrivacy = 'public' | 'shared' | 'private';
 export type MediaType = 'article' | 'video' | 'pdf' | 'exercise' | 'audio' | 'protocol';
 export type CommentStatus = 'visible' | 'hidden' | 'flagged';
+export type ReportReason = 'harassment' | 'spam' | 'misinformation' | 'inappropriate' | 'other';
+export type SessionStatus = 'active' | 'ended';
 
 export interface User {
   id: string;
@@ -105,4 +107,34 @@ export interface Report {
   reporterId: string;
   reporterName: string | null;
   reporterEmail: string | null;
+}
+
+export interface SessionParticipant {
+  id: string;
+  userId: string;
+  userName: string | null;
+  joinedAt: string;
+  leftAt: string | null;
+}
+
+export interface SessionMessage {
+  id: string;
+  content: string;
+  createdAt: string;
+  authorId: string;
+  authorName: string | null;
+}
+
+export interface ResourceSession {
+  id: string;
+  shareCode: string;
+  status: SessionStatus;
+  startedAt: string;
+  endedAt: string | null;
+  hostId: string;
+  hostName: string | null;
+  resourceId: string;
+  resourceTitle: string;
+  resourceMediaType: MediaType;
+  participants: SessionParticipant[];
 }

@@ -6,6 +6,7 @@ import { resource, category } from "@/db/schema";
 import { eq, and, desc, count, SQL } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { Plus, Pencil, Eye, Clock } from "lucide-react";
+import { SubmitDraftButton } from "./submit-button";
 
 const statusConfig: Record<string, { label: string; variant: "primary" | "secondary" | "success" | "error" | "outline" }> = {
   draft: { label: "Brouillon", variant: "outline" },
@@ -166,13 +167,16 @@ export default async function MesRessourcesPage({ searchParams }: PageProps) {
                   <span>Modifié {r.updatedAt.toLocaleDateString("fr-FR")}</span>
                 </div>
               </div>
-              <Link
-                href={`/ressource/${r.id}/modifier`}
-                className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-colors shrink-0"
-                title="Modifier"
-              >
-                <Pencil className="w-4 h-4" />
-              </Link>
+              <div className="flex items-center gap-1 shrink-0">
+                {r.status === "draft" && <SubmitDraftButton resourceId={r.id} />}
+                <Link
+                  href={`/ressource/${r.id}/modifier`}
+                  className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-colors"
+                  title="Modifier"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           ))
         )}

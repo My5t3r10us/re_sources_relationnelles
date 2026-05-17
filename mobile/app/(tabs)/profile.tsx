@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { me, auth } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { ResourceCard } from '@/components/ResourceCard';
@@ -14,12 +13,12 @@ import type { Resource } from '@/types/api';
 type Tab = 'resources' | 'favorites' | 'saved';
 
 export default function ProfileScreen() {
-  const router = useRouter();
   const { user, clearAuth } = useAuthStore();
   const [tab, setTab] = useState<Tab>('resources');
   const [items, setItems] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   const load = useCallback(async (t: Tab = tab) => {
     setLoading(true);
@@ -31,6 +30,17 @@ export default function ProfileScreen() {
   }, [tab]);
 
   useEffect(() => { load(tab); }, [tab]);
+
+  async function handleSubmitDraft(id: string) {
+    setSubmittingId(id);
+    const res = await me.submitDraft(id);
+    setSubmittingId(null);
+    if (res.error) {
+      Alert.alert('Erreur', res.error.message);
+      return;
+    }
+    setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'pending' } : r)));
+  }
 
   async function handleLogout() {
     Alert.alert('Déconnexion', 'Voulez-vous vous déconnecter ?', [
@@ -110,7 +120,29 @@ export default function ProfileScreen() {
               <Text className="text-gray-400 mt-3">Aucun élément</Text>
             </View>
           ) : (
-            items.map((item) => <ResourceCard key={item.id} resource={item} />)
+            items.map((item) => (
+              <View key={item.id}>
+                <ResourceCard resource={item} />
+                {tab === 'resources' && item.status === 'draft' && (
+                  <TouchableOpacity
+                    onPress={() => handleSubmitDraft(item.id)}
+                    disabled={submittingId === item.id}
+                    className="flex-row items-center justify-center bg-blue-50 rounded-xl py-2.5 mb-3 -mt-2"
+                  >
+                    {submittingId === item.id ? (
+                      <ActivityIndicator size="small" color="#2563eb" />
+                    ) : (
+                      <>
+                        <Ionicons name="send-outline" size={14} color="#2563eb" />
+                        <Text className="ml-2 text-sm font-semibold text-blue-600">
+                          Soumettre à validation
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))
           )}
         </View>
       </ScrollView>

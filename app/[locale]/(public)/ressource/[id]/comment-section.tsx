@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Reply, Trash2, Send, Loader2 } from "lucide-react";
 import { addComment, deleteComment, likeComment } from "./comment-actions";
+import { ReportButton } from "@/components/ui/report-button";
 
 interface CommentData {
   id: string;
@@ -229,16 +230,21 @@ function CommentItem({
               })}
             </span>
           </div>
-          {currentUserId === comment.authorId && (
-            <button
-              onClick={handleDelete}
-              disabled={isPending}
-              className="text-on-surface-variant hover:text-error transition-colors p-1"
-              title="Supprimer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {currentUserId && currentUserId !== comment.authorId && (
+              <ReportButton commentId={comment.id} size="sm" />
+            )}
+            {currentUserId === comment.authorId && (
+              <button
+                onClick={handleDelete}
+                disabled={isPending}
+                className="text-on-surface-variant hover:text-error transition-colors p-1"
+                title="Supprimer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-sm text-on-surface-variant mb-2 whitespace-pre-wrap wrap-break-word">
           {comment.content}
@@ -312,21 +318,26 @@ function CommentItem({
                         })}
                       </span>
                     </div>
-                    {currentUserId === reply.authorId && (
-                      <button
-                        onClick={() => {
-                          if (!confirm("Supprimer cette réponse ?")) return;
-                          startTransition(async () => {
-                            await deleteComment(reply.id, resourceId);
-                          });
-                        }}
-                        disabled={isPending}
-                        className="text-on-surface-variant hover:text-error transition-colors p-1"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {currentUserId && currentUserId !== reply.authorId && (
+                        <ReportButton commentId={reply.id} size="sm" />
+                      )}
+                      {currentUserId === reply.authorId && (
+                        <button
+                          onClick={() => {
+                            if (!confirm("Supprimer cette réponse ?")) return;
+                            startTransition(async () => {
+                              await deleteComment(reply.id, resourceId);
+                            });
+                          }}
+                          disabled={isPending}
+                          className="text-on-surface-variant hover:text-error transition-colors p-1"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-on-surface-variant whitespace-pre-wrap wrap-break-word">
                     {reply.content}
