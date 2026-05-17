@@ -1,19 +1,62 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import {
+  View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { admin } from '@/lib/api';
-import type { AdminStats, Resource, AdminUser, Report } from '@/types/api';
+import { useAuthStore } from '@/stores/auth';
+import type { AdminStats, Resource, AdminUser, Report, UserRole } from '@/types/api';
 
 type Section = 'stats' | 'resources' | 'users' | 'reports';
 
+type CreatableRole = Exclude<UserRole, 'citizen'>;
+
 export default function AdminScreen() {
+  const currentUser = useAuthStore((s) => s.user);
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+
   const [section, setSection] = useState<Section>('stats');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Create-user modal state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState<CreatableRole>('moderator');
+  const [creating, setCreating] = useState(false);
+
+  async function handleCreateUser() {
+    if (!newName.trim() || !newEmail.trim() || newPassword.length < 8) {
+      Alert.alert('Erreur', 'Tous les champs sont requis (mot de passe ≥ 8 caractères)');
+      return;
+    }
+    setCreating(true);
+    const res = await admin.users.create({
+      name: newName.trim(),
+      email: newEmail.trim(),
+      password: newPassword,
+      role: newRole,
+    });
+    setCreating(false);
+    if (res.error) {
+      Alert.alert('Erreur', res.error.message);
+      return;
+    }
+    setCreateOpen(false);
+    setNewName('');
+    setNewEmail('');
+    setNewPassword('');
+    setNewRole('moderator');
+    Alert.alert('Succès', 'Compte créé avec succès');
+    loadSection('users');
+  }
 
   useEffect(() => {
     loadSection(section);
@@ -128,6 +171,16 @@ export default function AdminScreen() {
             </View>
           ))}
 
+          {section === 'users' && isSuperAdmin && (
+            <TouchableOpacity
+              onPress={() => setCreateOpen(true)}
+              className="flex-row items-center justify-center bg-blue-600 rounded-2xl py-3 mb-3"
+            >
+              <Ionicons name="person-add" size={16} color="white" />
+              <Text className="text-white font-semibold ml-2">Créer un compte admin</Text>
+            </TouchableOpacity>
+          )}
+
           {section === 'users' && users.map((u) => (
             <View key={u.id} className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 flex-row items-center justify-between">
               <View className="flex-1 mr-3">
@@ -171,6 +224,83 @@ export default function AdminScreen() {
           ) : null}
         </ScrollView>
       )}
+
+      <Modal
+        visible={createOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCreateOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end bg-black/40"
+        >
+          <View className="bg-white rounded-t-3xl p-6 pb-10">
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-lg font-bold text-gray-900">Nouveau compte admin</Text>
+              <TouchableOpacity onPress={() => setCreateOpen(false)} disabled={creating}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <Text className="text-sm text-gray-600 mb-1.5 font-medium">Nom complet</Text>
+            <TextInput
+              value={newName}
+              onChangeText={setNewName}
+              autoCapitalize="words"
+              className="bg-gray-50 rounded-xl p-3 text-base text-gray-900 mb-3"
+            />
+
+            <Text className="text-sm text-gray-600 mb-1.5 font-medium">Email</Text>
+            <TextInput
+              value={newEmail}
+              onChangeText={setNewEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              className="bg-gray-50 rounded-xl p-3 text-base text-gray-900 mb-3"
+            />
+
+            <Text className="text-sm text-gray-600 mb-1.5 font-medium">Mot de passe (8+ caractères)</Text>
+            <TextInput
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              className="bg-gray-50 rounded-xl p-3 text-base text-gray-900 mb-4"
+            />
+
+            <Text className="text-sm text-gray-600 mb-2 font-medium">Rôle</Text>
+            <View className="flex-row gap-2 mb-5">
+              {([
+                { value: 'moderator', label: 'Modérateur' },
+                { value: 'admin', label: 'Admin' },
+                { value: 'super_admin', label: 'Super-Admin' },
+              ] as { value: CreatableRole; label: string }[]).map((r) => (
+                <TouchableOpacity
+                  key={r.value}
+                  onPress={() => setNewRole(r.value)}
+                  className={`flex-1 rounded-xl py-2 items-center ${newRole === r.value ? 'bg-blue-600' : 'bg-gray-100'}`}
+                >
+                  <Text className={`text-xs font-semibold ${newRole === r.value ? 'text-white' : 'text-gray-600'}`}>
+                    {r.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={handleCreateUser}
+              disabled={creating}
+              className="bg-blue-600 rounded-xl py-3 items-center justify-center"
+            >
+              {creating ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white font-semibold">Créer le compte</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }

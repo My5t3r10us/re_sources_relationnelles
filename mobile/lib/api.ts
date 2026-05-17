@@ -1,5 +1,18 @@
 import { useAuthStore } from '@/stores/auth';
-import type { ApiResponse, Resource, Category, Comment, User, AdminStats, AdminUser, Report } from '@/types/api';
+import type {
+  ApiResponse,
+  Resource,
+  Category,
+  Comment,
+  User,
+  AdminStats,
+  AdminUser,
+  Report,
+  ReportReason,
+  ResourceSession,
+  SessionMessage,
+  UserRole,
+} from '@/types/api';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
@@ -137,6 +150,45 @@ export const me = {
   saved: () => apiFetch<Resource[]>('/api/v1/me/saved'),
 
   completions: () => apiFetch<Resource[]>('/api/v1/me/completions'),
+
+  submitDraft: (id: string) =>
+    apiFetch<{ id: string; status: string }>(`/api/v1/me/resources/${id}/submit`, { method: 'POST' }),
+};
+
+// ─── Reports (user-facing) ───
+
+export const reports = {
+  create: (data: { reason: ReportReason; description?: string; resourceId?: string; commentId?: string }) =>
+    apiFetch<{ id: string }>('/api/v1/reports', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Collaborative sessions ───
+
+export const sessions = {
+  start: (resourceId: string) =>
+    apiFetch<ResourceSession>(`/api/v1/resources/${resourceId}/sessions`, { method: 'POST' }),
+
+  get: (code: string) => apiFetch<ResourceSession>(`/api/v1/sessions/${code}`),
+
+  end: (code: string) =>
+    apiFetch<{ id: string; status: string }>(`/api/v1/sessions/${code}`, { method: 'DELETE' }),
+
+  join: (code: string) =>
+    apiFetch<{ joined: boolean }>(`/api/v1/sessions/${code}/join`, { method: 'POST' }),
+
+  leave: (code: string) =>
+    apiFetch<{ left: boolean }>(`/api/v1/sessions/${code}/leave`, { method: 'POST' }),
+
+  getMessages: (code: string, since?: string) => {
+    const qs = since ? `?since=${encodeURIComponent(since)}` : '';
+    return apiFetch<SessionMessage[]>(`/api/v1/sessions/${code}/messages${qs}`);
+  },
+
+  sendMessage: (code: string, content: string) =>
+    apiFetch<SessionMessage>(`/api/v1/sessions/${code}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
 };
 
 // ─── Admin ───
@@ -169,6 +221,11 @@ export const admin = {
 
   users: {
     list: (page = 1) => apiFetch<AdminUser[]>(`/api/v1/admin/users?page=${page}`),
+    create: (data: { name: string; email: string; password: string; role: Exclude<UserRole, 'citizen'> }) =>
+      apiFetch<{ id: string }>('/api/v1/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     setRole: (id: string, role: string) =>
       apiFetch<{ id: string; role: string }>(`/api/v1/admin/users/${id}/role`, {
         method: 'PUT',

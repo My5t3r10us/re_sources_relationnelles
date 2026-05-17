@@ -201,35 +201,35 @@ export default async function AdminRessourcesPage({ searchParams }: PageProps) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            disabled={page <= 1}
-            asChild={page > 1}
-          >
-            {page > 1 ? (
-              <Link href={buildUrl({ ...(statusFilter ? { status: statusFilter } : {}), ...(search ? { q: search } : {}), page: String(page - 1) })}>
+          {page > 1 ? (
+            <Link
+              href={buildUrl({ ...(statusFilter ? { status: statusFilter } : {}), ...(search ? { q: search } : {}), page: String(page - 1) })}
+            >
+              <Button variant="secondary" size="sm">
                 <ChevronLeft className="w-4 h-4 mr-1" /> Précédent
-              </Link>
-            ) : (
-              <span><ChevronLeft className="w-4 h-4 mr-1" /> Précédent</span>
-            )}
-          </Button>
+              </Button>
+            </Link>
+          ) : (
+            <Button variant="secondary" size="sm" disabled>
+              <ChevronLeft className="w-4 h-4 mr-1" /> Précédent
+            </Button>
+          )}
           <span className="text-sm text-on-surface-variant">
             Page {page} / {totalPages}
           </span>
-          <Button
-            variant="outline"
-            disabled={page >= totalPages}
-            asChild={page < totalPages}
-          >
-            {page < totalPages ? (
-              <Link href={buildUrl({ ...(statusFilter ? { status: statusFilter } : {}), ...(search ? { q: search } : {}), page: String(page + 1) })}>
+          {page < totalPages ? (
+            <Link
+              href={buildUrl({ ...(statusFilter ? { status: statusFilter } : {}), ...(search ? { q: search } : {}), page: String(page + 1) })}
+            >
+              <Button variant="secondary" size="sm">
                 Suivant <ChevronRight className="w-4 h-4 ml-1" />
-              </Link>
-            ) : (
-              <span>Suivant <ChevronRight className="w-4 h-4 ml-1" /></span>
-            )}
-          </Button>
+              </Button>
+            </Link>
+          ) : (
+            <Button variant="secondary" size="sm" disabled>
+              Suivant <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          )}
         </div>
       )}
     </div>

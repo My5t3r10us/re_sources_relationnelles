@@ -21,6 +21,10 @@ import { eq, and, desc } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { CommentSection } from "./comment-section";
 import { FavoriteButton, ReadButton, SaveButton, ShareButton } from "./resource-client";
+import { ReportButton } from "@/components/ui/report-button";
+import { StartSessionButton } from "./start-session-button";
+
+const COLLABORATIVE_TYPES = new Set(["exercise", "protocol"]);
 
 const mediaTypeLabels: Record<string, string> = {
   article: "Article",
@@ -250,6 +254,9 @@ export default async function RessourcePage({ params }: PageProps) {
               isRead={isRead}
               isAuthenticated={!!session?.user}
             />
+            {session?.user && session.user.id !== res.authorId && (
+              <ReportButton resourceId={res.id} />
+            )}
           </div>
         </div>
       </div>
@@ -262,6 +269,19 @@ export default async function RessourcePage({ params }: PageProps) {
             alt={res.title}
             className="w-full h-full object-cover"
           />
+        </div>
+      )}
+
+      {/* Collaborative session CTA */}
+      {session?.user && res.status === "published" && COLLABORATIVE_TYPES.has(res.mediaType) && (
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 mb-10 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="font-semibold text-on-surface mb-1">Pratiquer en groupe ?</p>
+            <p className="text-sm text-on-surface-variant">
+              Démarrez une session collaborative et invitez d&apos;autres citoyens à participer.
+            </p>
+          </div>
+          <StartSessionButton resourceId={res.id} />
         </div>
       )}
 

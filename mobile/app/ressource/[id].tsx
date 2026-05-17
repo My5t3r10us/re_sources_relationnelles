@@ -4,16 +4,20 @@ import {
   ActivityIndicator, TextInput, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { resources, comments as commentsApi } from '@/lib/api';
+import { resources, comments as commentsApi, sessions } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { CommentItem } from '@/components/CommentItem';
+import { ReportButton } from '@/components/ReportButton';
 import type { Resource, Comment } from '@/types/api';
+
+const COLLABORATIVE_TYPES = new Set(['exercise', 'protocol']);
 
 export default function ResourceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
 
   const [resource, setResource] = useState<Resource | null>(null);
@@ -22,6 +26,21 @@ export default function ResourceDetailScreen() {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [startingSession, setStartingSession] = useState(false);
+
+  async function handleStartSession() {
+    if (!resource) return;
+    setStartingSession(true);
+    const res = await sessions.start(resource.id);
+    setStartingSession(false);
+    if (res.error) {
+      Alert.alert('Erreur', res.error.message);
+      return;
+    }
+    if (res.data?.shareCode) {
+      router.push(`/session/${res.data.shareCode}`);
+    }
+  }
 
   const load = useCallback(async () => {
     const [rRes, cRes] = await Promise.all([
@@ -175,7 +194,35 @@ export default function ResourceDetailScreen() {
                   Lu
                 </Text>
               </TouchableOpacity>
+              {user && user.id !== resource.authorId && (
+                <ReportButton resourceId={resource.id} />
+              )}
             </View>
+
+            {user && resource.status === 'published' && COLLABORATIVE_TYPES.has(resource.mediaType) && (
+              <TouchableOpacity
+                onPress={handleStartSession}
+                disabled={startingSession}
+                className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex-row items-center justify-between"
+              >
+                <View className="flex-1 mr-3">
+                  <Text className="text-sm font-semibold text-blue-900 mb-0.5">
+                    Pratiquer en groupe ?
+                  </Text>
+                  <Text className="text-xs text-blue-700">
+                    Démarrez une session collaborative et invitez d&apos;autres citoyens.
+                  </Text>
+                </View>
+                {startingSession ? (
+                  <ActivityIndicator color="#2563eb" />
+                ) : (
+                  <View className="bg-blue-600 rounded-xl px-4 py-2 flex-row items-center">
+                    <Ionicons name="people" size={14} color="white" />
+                    <Text className="text-white font-semibold text-xs ml-1.5">Démarrer</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
 
             <Text className="text-base text-gray-800 leading-7 mb-8">{resource.content}</Text>
 

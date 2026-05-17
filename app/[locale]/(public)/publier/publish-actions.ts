@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { resource, category, resourceFile } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -156,4 +156,25 @@ export async function updateResource(resourceId: string, params: PublishParams) 
   redirect(`/ressource/${resourceId}`);
 }
 
+export async function submitDraftForReview(resourceId: string) {
+  const session = await getServerSession();
+  if (!session?.user) throw new Error("Non authentifié");
 
+  const [existing] = await db
+    .select({ authorId: resource.authorId, status: resource.status })
+    .from(resource)
+    .where(eq(resource.id, resourceId))
+    .limit(1);
+
+  if (!existing) throw new Error("Ressource introuvable");
+  if (existing.authorId !== session.user.id) throw new Error("Non autorisé");
+  if (existing.status !== "draft") throw new Error("Seuls les brouillons peuvent être soumis");
+
+  await db
+    .update(resource)
+    .set({ status: "pending", updatedAt: new Date() })
+    .where(and(eq(resource.id, resourceId), eq(resource.status, "draft")));
+
+  revalidatePath("/mes-ressources");
+  revalidatePath(`/ressource/${resourceId}`);
+}
