@@ -26,7 +26,6 @@ export const resourceStatusEnum = pgEnum("resource_status", [
 
 export const resourcePrivacyEnum = pgEnum("resource_privacy", [
   "public",
-  "shared",
   "private",
 ]);
 

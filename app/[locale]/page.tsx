@@ -1,38 +1,84 @@
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { ArrowRight, MessageSquare, Search, Clock, PlayCircle, Headphones, Bookmark } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { ArrowRight, MessageSquare, Search, Clock, Bookmark, FileText, Video, FileType2, Activity, Headphones, BookOpen } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { getHomeData, type HomeResourceCard } from "@/lib/home-data";
 
-const featuredResources = [
-  {
-    id: "1",
-    title: "Gérer l'anxiété au travail : guide pratique",
-    summary:
-      "Stratégies concrètes pour gérer le stress en milieu professionnel, créées en collaboration avec des thérapeutes.",
-    category: "Guide",
-    readingTime: 15,
-  },
-  {
-    id: "2",
-    title: "Construire des dynamiques familiales résilientes",
-    summary:
-      "Une approche modulaire pour favoriser la communication ouverte et la sécurité émotionnelle au sein de la famille.",
-    category: "Cours interactif",
-    modules: 4,
-  },
-  {
-    id: "3",
-    title: "L'architecture de l'empathie : Ép. 4",
-    summary:
-      "Dr. Elena Rostova explore les fondements neurologiques de l'empathie et comment la cultiver au quotidien.",
-    category: "Podcast",
-    duration: 45,
-  },
-];
+const mediaTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  article: FileText,
+  video: Video,
+  pdf: FileType2,
+  exercise: Activity,
+  audio: Headphones,
+  protocol: BookOpen,
+};
 
-export default function Home() {
-  const t = useTranslations("Home");
+function formatViews(n: number) {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+function ResourceTile({ res, save }: { res: HomeResourceCard; save: string }) {
+  const Icon = mediaTypeIcons[res.mediaType] ?? FileText;
+  return (
+    <Link href={`/ressource/${res.id}`} className="group">
+      <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm hover:shadow-ambient hover:-translate-y-1 transition-all overflow-hidden h-full flex flex-col">
+        <div
+          className="aspect-[4/3] bg-surface-container-high relative overflow-hidden"
+          style={
+            res.imageUrl
+              ? { backgroundImage: `url(${res.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+              : undefined
+          }
+        >
+          {res.categoryName && (
+            <div className="absolute top-3 left-3">
+              <span className="bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest text-on-surface">
+                {res.categoryName}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="p-5 flex flex-col flex-1">
+          <h3 className="text-title-md text-on-surface mb-2 group-hover:text-primary transition-colors line-clamp-2">
+            {res.title}
+          </h3>
+          {res.summary && (
+            <p className="text-sm text-on-surface-variant line-clamp-3 flex-1">
+              {res.summary}
+            </p>
+          )}
+          <div className="flex items-center justify-between mt-4">
+            <span className="flex items-center gap-1 text-xs text-on-surface-variant">
+              {res.readingTime ? (
+                <>
+                  <Clock className="w-4 h-4" />
+                  {res.readingTime} min
+                </>
+              ) : (
+                <>
+                  <Icon className="w-4 h-4" />
+                  {res.mediaType}
+                </>
+              )}
+            </span>
+            <span className="flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary">
+              <Bookmark className="w-5 h-5" />
+              {save}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export default async function Home() {
+  const t = await getTranslations("Home");
+  const data = await getHomeData();
+
+  const heroResources = data.featured.length > 0 ? data.featured : data.recent.slice(0, 3);
 
   return (
     <>
@@ -72,7 +118,7 @@ export default function Home() {
                 <MessageSquare className="w-6 h-6 text-primary mb-2" />
                 <p className="font-bold text-on-surface text-sm">{t("activeNetwork")}</p>
                 <p className="text-xs text-on-surface-variant">
-                  {t("resourcesShared")}
+                  {t("resourcesShared", { count: data.stats.totalResources })}
                 </p>
               </div>
             </div>
@@ -99,88 +145,76 @@ export default function Home() {
                 {t("searchButton")}
               </Link>
             </div>
-            <div className="flex items-center justify-center gap-3 mt-4">
-              <span className="text-xs text-on-surface-variant font-semibold uppercase tracking-wide">
-                {t("popular")}
-              </span>
-              {["Anxiété & Stress", "Équilibre de vie", "Parentalité"].map(
-                (tag) => (
+            {data.popularCategories.length > 0 && (
+              <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
+                <span className="text-xs text-on-surface-variant font-semibold uppercase tracking-wide">
+                  {t("popular")}
+                </span>
+                {data.popularCategories.map((cat) => (
                   <Link
-                    key={tag}
-                    href="/catalogue"
+                    key={cat.id}
+                    href={`/catalogue?category=${cat.slug}`}
                     className="px-3 py-1 rounded-full bg-surface-container-lowest text-sm text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-colors"
                   >
-                    {tag}
+                    {cat.icon ? `${cat.icon} ` : ""}{cat.name}
                   </Link>
-                )
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
         {/* Featured Resources */}
-        <section className="max-w-7xl mx-auto px-6 py-16 md:py-20">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-headline-lg text-on-surface">
-                {t("featuredHeading")}
-              </h2>
-              <p className="text-on-surface-variant mt-1">
-                {t("featuredSubheading")}
-              </p>
-            </div>
-            <Link
-              href="/catalogue"
-              className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline"
-            >
-              {t("seeAll")}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredResources.map((res) => (
-              <Link key={res.id} href={`/ressource/${res.id}`} className="group">
-                <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm hover:shadow-ambient hover:-translate-y-1 transition-all overflow-hidden h-full flex flex-col">
-                  <div className="aspect-[4/3] bg-surface-container-high relative overflow-hidden">
-                    <div className="absolute top-3 left-3">
-                      <span className="bg-surface-container-lowest/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest text-on-surface">
-                        {res.category}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className="text-title-md text-on-surface mb-2 group-hover:text-primary transition-colors">
-                      {res.title}
-                    </h3>
-                    <p className="text-sm text-on-surface-variant line-clamp-3 flex-1">
-                      {res.summary}
-                    </p>
-                    <div className="flex items-center justify-between mt-4">
-                      <span className="flex items-center gap-1 text-xs text-on-surface-variant">
-                        {"readingTime" in res ? (
-                          <Clock className="w-4 h-4" />
-                        ) : "modules" in res ? (
-                          <PlayCircle className="w-4 h-4" />
-                        ) : (
-                          <Headphones className="w-4 h-4" />
-                        )}
-                        {"readingTime" in res
-                          ? `${res.readingTime} min`
-                          : "modules" in res
-                            ? `${res.modules} Modules`
-                            : `${res.duration} min`}
-                      </span>
-                      <span className="flex items-center gap-1 text-sm text-on-surface-variant hover:text-primary">
-                        <Bookmark className="w-5 h-5" />
-                        {t("save")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+        {heroResources.length > 0 && (
+          <section className="max-w-7xl mx-auto px-6 py-16 md:py-20">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-headline-lg text-on-surface">
+                  {t("featuredHeading")}
+                </h2>
+                <p className="text-on-surface-variant mt-1">
+                  {t("featuredSubheading")}
+                </p>
+              </div>
+              <Link
+                href="/catalogue"
+                className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline"
+              >
+                {t("seeAll")}
+                <ArrowRight className="w-4 h-4" />
               </Link>
-            ))}
-          </div>
-        </section>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {heroResources.map((res) => (
+                <ResourceTile key={res.id} res={res} save={t("save")} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recent Resources */}
+        {data.recent.length > 0 && (
+          <section className="max-w-7xl mx-auto px-6 pb-16 md:pb-20">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-headline-lg text-on-surface">
+                  {t("recentHeading")}
+                </h2>
+                <p className="text-on-surface-variant mt-1">
+                  {t("recentSubheading")}
+                </p>
+              </div>
+              <span className="text-xs text-on-surface-variant">
+                {formatViews(data.stats.totalResources)} {t("publishedShort")}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.recent.map((res) => (
+                <ResourceTile key={res.id} res={res} save={t("save")} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
     </>

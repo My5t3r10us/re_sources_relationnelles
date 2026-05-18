@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
-import { Flag, ShieldAlert, MessageSquare, FileText } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { db } from "@/db";
-import { resource, comment, report, user, category } from "@/db/schema";
+import { resource, comment, user, category } from "@/db/schema";
 import { eq, count, desc } from "drizzle-orm";
 import {
   ApproveResourceButton,
@@ -9,7 +9,6 @@ import {
   UnpublishResourceButton,
   DeleteCommentButton,
   HideCommentButton,
-  ResolveReportButton,
 } from "./moderation-actions";
 
 function timeAgo(date: Date) {
@@ -26,7 +25,6 @@ export default async function ModerationPage() {
     pendingResources,
     flaggedResources,
     flaggedComments,
-    unresolvedReports,
     [{ pendingCount }],
     [{ flaggedCount }],
   ] = await Promise.all([
@@ -79,27 +77,12 @@ export default async function ModerationPage() {
       .where(eq(comment.status, "flagged"))
       .orderBy(desc(comment.createdAt))
       .limit(20),
-    db
-      .select({
-        id: report.id,
-        reason: report.reason,
-        description: report.description,
-        createdAt: report.createdAt,
-        reporterName: user.name,
-        resourceId: report.resourceId,
-        commentId: report.commentId,
-      })
-      .from(report)
-      .innerJoin(user, eq(report.reporterId, user.id))
-      .where(eq(report.resolved, false))
-      .orderBy(desc(report.createdAt))
-      .limit(20),
     db.select({ pendingCount: count() }).from(resource).where(eq(resource.status, "pending")),
     db.select({ flaggedCount: count() }).from(resource).where(eq(resource.status, "flagged")),
   ]);
 
   const flaggedCommentsCount = flaggedComments.length;
-  const totalItems = pendingResources.length + flaggedResources.length + flaggedComments.length + unresolvedReports.length;
+  const totalItems = pendingResources.length + flaggedResources.length + flaggedComments.length;
 
   function getInitials(name: string) {
     return name
@@ -109,14 +92,6 @@ export default async function ModerationPage() {
       .toUpperCase()
       .slice(0, 2);
   }
-
-  const reasonLabels: Record<string, string> = {
-    harassment: "Harcèlement",
-    spam: "Spam",
-    misinformation: "Désinformation",
-    inappropriate: "Inapproprié",
-    other: "Autre",
-  };
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -141,9 +116,6 @@ export default async function ModerationPage() {
         <div className="flex items-center gap-3 ml-auto">
           <Badge variant="secondary">{pendingCount} En attente</Badge>
           <Badge variant="error">{flaggedCount + flaggedCommentsCount} Signalés</Badge>
-          {unresolvedReports.length > 0 && (
-            <Badge variant="error">{unresolvedReports.length} Signalements</Badge>
-          )}
         </div>
       </div>
 
@@ -239,45 +211,6 @@ export default async function ModerationPage() {
               <div className="flex items-center gap-3 mt-auto pt-4">
                 <HideCommentButton commentId={c.id} />
                 <DeleteCommentButton commentId={c.id} />
-              </div>
-            </div>
-          ))}
-
-          {/* Unresolved reports */}
-          {unresolvedReports.map((r) => (
-            <div key={r.id} className="bg-surface-container-lowest rounded-xl shadow-ambient-sm p-6 flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center text-sm font-bold">
-                    <Flag className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-on-surface">{r.reporterName}</p>
-                    <p className="text-xs text-on-surface-variant">Signalement {timeAgo(r.createdAt)}</p>
-                  </div>
-                </div>
-                <Badge variant="error">{reasonLabels[r.reason] ?? r.reason}</Badge>
-              </div>
-              <h3 className="text-title-md text-on-surface mb-2">
-                Signalement : {reasonLabels[r.reason] ?? r.reason}
-              </h3>
-              {r.description && (
-                <p className="text-sm text-on-surface-variant mb-3">{r.description}</p>
-              )}
-              <div className="flex items-center gap-2 mb-4 text-xs text-on-surface-variant">
-                {r.resourceId && (
-                  <span className="flex items-center gap-1">
-                    <FileText className="w-3 h-3" /> Ressource concernée
-                  </span>
-                )}
-                {r.commentId && (
-                  <span className="flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3" /> Commentaire concerné
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3 mt-auto pt-4">
-                <ResolveReportButton reportId={r.id} />
               </div>
             </div>
           ))}
