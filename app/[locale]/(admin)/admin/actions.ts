@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { resource, user, comment, report, category } from "@/db/schema";
+import { resource, user, comment, report, category, resourceFile } from "@/db/schema";
+import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
 import { eq } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
@@ -121,7 +122,31 @@ export async function resolveReport(reportId: string) {
 
 export async function deleteResource(resourceId: string) {
   await requireAdmin();
+
+  const [existing] = await db
+    .select({ imageUrl: resource.imageUrl })
+    .from(resource)
+    .where(eq(resource.id, resourceId))
+    .limit(1);
+
+  const files = await db
+    .select({ url: resourceFile.url })
+    .from(resourceFile)
+    .where(eq(resourceFile.resourceId, resourceId));
+
   await db.delete(resource).where(eq(resource.id, resourceId));
+
+  const urlsToDelete = [
+    ...(existing?.imageUrl ? [existing.imageUrl] : []),
+    ...files.map((f) => f.url),
+  ];
+  await Promise.allSettled(
+    urlsToDelete.map((url) => {
+      const key = getObjectKeyFromUrl(url);
+      return key ? deleteObject(key) : Promise.resolve();
+    })
+  );
+
   revalidatePath("/admin/ressources");
   revalidatePath("/catalogue");
 }
