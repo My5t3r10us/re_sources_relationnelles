@@ -24,6 +24,13 @@ export function getPublicUrl(objectKey: string): string {
   return `${endpoint}/${S3_BUCKET}/${objectKey}`;
 }
 
+export function getObjectKeyFromUrl(url: string): string | null {
+  const endpoint = process.env.AWS_ENDPOINT_URL_S3 ?? "https://t3.storage.dev";
+  const prefix = `${endpoint}/${S3_BUCKET}/`;
+  if (!url.startsWith(prefix)) return null;
+  return url.slice(prefix.length);
+}
+
 export async function uploadObject(
   objectKey: string,
   body: Buffer | Uint8Array,

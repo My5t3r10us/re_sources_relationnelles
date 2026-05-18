@@ -3,6 +3,7 @@
 import { db } from "@/db";
 import { resource, category, resourceFile } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
+import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
 import { getServerSession } from "@/lib/auth-server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -138,8 +139,20 @@ export async function updateResource(resourceId: string, params: PublishParams) 
     .where(eq(resource.id, resourceId));
 
   if (attachments && attachments.length > 0) {
-    // Replace existing attachments
+    const oldFiles = await db
+      .select({ url: resourceFile.url })
+      .from(resourceFile)
+      .where(eq(resourceFile.resourceId, resourceId));
+
     await db.delete(resourceFile).where(eq(resourceFile.resourceId, resourceId));
+
+    await Promise.allSettled(
+      oldFiles.map(({ url }) => {
+        const key = getObjectKeyFromUrl(url);
+        return key ? deleteObject(key) : Promise.resolve();
+      })
+    );
+
     await db.insert(resourceFile).values(
       attachments.map((a) => ({
         id: crypto.randomUUID(),
