@@ -25,10 +25,11 @@ export default function LoginScreen() {
     setError('');
     try {
       const res = await auth.signIn(email.trim(), password);
-      if (res?.session?.token && res?.user) {
-        await setAuth(res.user, res.session.token);
+      const token: string | undefined = res?.token ?? res?.session?.token;
+      if (token && res?.user) {
+        await setAuth(res.user, token);
       } else {
-        setError(res?.error?.message ?? 'Email ou mot de passe incorrect');
+        setError(res?.error?.message ?? res?.message ?? 'Email ou mot de passe incorrect');
       }
     } catch {
       setError('Erreur de connexion. Vérifiez votre réseau.');

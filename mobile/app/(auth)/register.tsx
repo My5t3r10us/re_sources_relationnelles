@@ -34,10 +34,11 @@ export default function RegisterScreen() {
     try {
       const name = `${firstName.trim()} ${lastName.trim()}`.trim() || email.split('@')[0];
       const res = await auth.signUp({ email: email.trim(), password, name, firstName: firstName.trim(), lastName: lastName.trim() });
-      if (res?.session?.token && res?.user) {
-        await setAuth(res.user, res.session.token);
+      const token: string | undefined = res?.token ?? res?.session?.token;
+      if (token && res?.user) {
+        await setAuth(res.user, token);
       } else {
-        setError(res?.error?.message ?? "Impossible de créer le compte");
+        setError(res?.error?.message ?? res?.message ?? "Impossible de créer le compte");
       }
     } catch {
       setError('Erreur de connexion. Vérifiez votre réseau.');

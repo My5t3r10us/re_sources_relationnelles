@@ -1,0 +1,11 @@
+appId: com.resourcrelationnelles.app
+name: "Resource detail - reachable from catalogue"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Catalogue"
+- waitForAnimationToEnd
+- tapOn:
+    text: ".*Ressource.*"
+    optional: true
+- waitForAnimationToEnd
+- back

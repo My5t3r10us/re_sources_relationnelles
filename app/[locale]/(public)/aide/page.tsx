@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Info, Search, Bookmark, ShieldCheck, CheckCircle } from "lucide-react";
 
 const faqItems = [
@@ -79,7 +80,14 @@ export default function AidePage() {
             fournissant une plateforme sobre, faisant autorité et profondément
             empathique pour tous les citoyens en quête de soutien.
           </p>
-          <div className="aspect-video bg-surface-container-high rounded-xl overflow-hidden" />
+          <div className="aspect-video bg-surface-container-high rounded-xl overflow-hidden relative">
+            <Image
+              src="/assets/images/aide.jpg"
+              alt=""
+              fill
+              className="object-cover"
+            />
+          </div>
         </div>
       </div>
 

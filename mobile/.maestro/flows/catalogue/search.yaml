@@ -1,0 +1,15 @@
+appId: com.resourcrelationnelles.app
+name: "Catalogue - search"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Catalogue"
+- waitForAnimationToEnd
+- tapOn:
+    id: "search-input"
+    optional: true
+- tapOn:
+    text: "Rechercher.*"
+    optional: true
+- inputText: "Ressource"
+- hideKeyboard
+- waitForAnimationToEnd

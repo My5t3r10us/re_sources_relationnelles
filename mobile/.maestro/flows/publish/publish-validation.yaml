@@ -1,0 +1,12 @@
+appId: com.resourcrelationnelles.app
+name: "Publish - empty form shows error"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Publier"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "Soumettre"
+    direction: DOWN
+- tapOn: "Soumettre"
+- assertVisible: "Le titre et le contenu sont requis"

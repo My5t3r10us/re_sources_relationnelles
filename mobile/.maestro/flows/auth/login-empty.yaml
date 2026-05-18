@@ -1,0 +1,8 @@
+appId: com.resourcrelationnelles.app
+name: "Login - empty fields show validation error"
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Connexion"
+- tapOn: "Se connecter"
+- assertVisible: "Email et mot de passe requis"

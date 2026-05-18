@@ -10,6 +10,18 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  trustedOrigins: [
+    "http://localhost:3000",
+    "http://localhost:8081",
+    "http://localhost:19000",
+    "http://localhost:19006",
+    "http://10.0.2.2:3000",
+    "re-sources://",
+    "exp://*",
+  ],
+  advanced: {
+    disableCSRFCheck: true,
+  },
   emailAndPassword: {
     enabled: true,
   },

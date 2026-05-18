@@ -1,0 +1,13 @@
+appId: com.resourcrelationnelles.app
+name: "Profile - switch between tabs"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Profil"
+- waitForAnimationToEnd
+- assertVisible: "Mes ressources"
+- tapOn: "Favoris"
+- waitForAnimationToEnd
+- tapOn: "Sauvegardés"
+- waitForAnimationToEnd
+- tapOn: "Mes ressources"
+- waitForAnimationToEnd

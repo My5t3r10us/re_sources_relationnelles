@@ -1,0 +1,23 @@
+appId: com.resourcrelationnelles.app
+name: "Publish - submit a new resource"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Publier"
+- waitForAnimationToEnd
+- tapOn: "Titre"
+- inputText: "Ressource Maestro ${MAESTRO_TEST_ID}"
+- hideKeyboard
+- tapOn: "Résumé"
+- inputText: "Résumé court"
+- hideKeyboard
+- tapOn: "Contenu"
+- inputText: "Voici le contenu de test pour Maestro avec quelques mots."
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Soumettre"
+    direction: DOWN
+- tapOn: "Soumettre"
+- waitForAnimationToEnd
+- assertVisible:
+    text: ".*Succès.*|.*soumise.*"

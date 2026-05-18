@@ -19,16 +19,23 @@ export function getS3Client(): S3Client {
 
 export const S3_BUCKET = process.env.AWS_BUCKET ?? "resources";
 
+const PUBLIC_URL_BASE =
+  process.env.AWS_PUBLIC_URL?.replace(/\/$/, "") ??
+  `https://${S3_BUCKET}.t3.tigrisfiles.io`;
+
 export function getPublicUrl(objectKey: string): string {
-  const endpoint = process.env.AWS_ENDPOINT_URL_S3 ?? "https://t3.storage.dev";
-  return `${endpoint}/${S3_BUCKET}/${objectKey}`;
+  return `${PUBLIC_URL_BASE}/${objectKey}`;
 }
 
 export function getObjectKeyFromUrl(url: string): string | null {
+  const publicPrefix = `${PUBLIC_URL_BASE}/`;
+  if (url.startsWith(publicPrefix)) return url.slice(publicPrefix.length);
+
   const endpoint = process.env.AWS_ENDPOINT_URL_S3 ?? "https://t3.storage.dev";
-  const prefix = `${endpoint}/${S3_BUCKET}/`;
-  if (!url.startsWith(prefix)) return null;
-  return url.slice(prefix.length);
+  const legacyPrefix = `${endpoint}/${S3_BUCKET}/`;
+  if (url.startsWith(legacyPrefix)) return url.slice(legacyPrefix.length);
+
+  return null;
 }
 
 export async function uploadObject(

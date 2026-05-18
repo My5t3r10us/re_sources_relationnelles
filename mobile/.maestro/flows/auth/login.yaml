@@ -1,0 +1,17 @@
+appId: com.resourcrelationnelles.app
+name: "Login - happy path"
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Connexion"
+- assertVisible: "Email"
+- assertVisible: "Mot de passe"
+- tapOn: "Email"
+- inputText: "citizen-e2e@test.local"
+- hideKeyboard
+- tapOn: "Mot de passe"
+- inputText: "Password123!"
+- hideKeyboard
+- tapOn: "Se connecter"
+- waitForAnimationToEnd
+- assertNotVisible: "Email ou mot de passe incorrect"

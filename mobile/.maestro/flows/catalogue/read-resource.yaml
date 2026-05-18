@@ -1,0 +1,11 @@
+appId: com.resourcrelationnelles.app
+name: "Catalogue - open a resource detail"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Catalogue"
+- waitForAnimationToEnd
+- tapOn:
+    text: "Ressource E2E publiée"
+    optional: true
+- waitForAnimationToEnd
+- back

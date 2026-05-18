@@ -1,0 +1,14 @@
+appId: com.resourcrelationnelles.app
+---
+- runFlow:
+    when:
+      visible: "Connexion"
+    commands:
+      - tapOn: "Email"
+      - inputText: "citizen-e2e@test.local"
+      - hideKeyboard
+      - tapOn: "Mot de passe"
+      - inputText: "Password123!"
+      - hideKeyboard
+      - tapOn: "Se connecter"
+      - waitForAnimationToEnd

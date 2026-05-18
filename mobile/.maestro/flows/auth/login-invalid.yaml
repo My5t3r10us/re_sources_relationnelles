@@ -1,0 +1,16 @@
+appId: com.resourcrelationnelles.app
+name: "Login - invalid credentials show error"
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Connexion"
+- tapOn: "Email"
+- inputText: "wrong@nope.test"
+- hideKeyboard
+- tapOn: "Mot de passe"
+- inputText: "bad-password"
+- hideKeyboard
+- tapOn: "Se connecter"
+- waitForAnimationToEnd
+- assertVisible:
+    text: ".*incorrect.*|.*Erreur.*|.*requis.*"

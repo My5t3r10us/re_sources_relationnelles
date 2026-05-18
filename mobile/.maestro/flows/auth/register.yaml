@@ -1,0 +1,22 @@
+appId: com.resourcrelationnelles.app
+name: "Register - happy path"
+---
+- launchApp:
+    clearState: true
+- tapOn: "Créer un compte"
+- assertVisible: "Créer un compte"
+- tapOn: "Prénom"
+- inputText: "Jean"
+- hideKeyboard
+- tapOn: "Nom"
+- inputText: "Dupont"
+- hideKeyboard
+- tapOn: "Email"
+- inputText: "test-${MAESTRO_TEST_ID}@maestro.local"
+- hideKeyboard
+- tapOn: "Mot de passe"
+- inputText: "Password123!"
+- hideKeyboard
+- tapOn: "Créer mon compte"
+- waitForAnimationToEnd
+- assertNotVisible: "Impossible de créer le compte"

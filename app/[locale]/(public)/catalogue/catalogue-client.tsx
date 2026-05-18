@@ -28,6 +28,7 @@ interface Resource {
   featured: boolean;
   viewCount: number;
   createdAt: Date;
+  imageUrl: string | null;
   categoryName: string | null;
   categorySlug: string | null;
 }
@@ -206,7 +207,15 @@ export function CatalogueClient({
               >
                 <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm hover:shadow-ambient transition-all overflow-hidden flex flex-col md:flex-row h-full">
                   <div className="relative md:w-2/5 aspect-4/3 md:aspect-auto overflow-hidden">
-                    <div className="w-full h-full bg-surface-container-high min-h-50" />
+                    {featured.imageUrl ? (
+                      <img
+                        src={featured.imageUrl}
+                        alt={featured.title}
+                        className="w-full h-full object-cover min-h-50"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-surface-container-high min-h-50" />
+                    )}
                     <div className="absolute top-3 left-3">
                       <Badge variant="primary">
                         <Sparkles className="w-3.5 h-3.5" />
@@ -249,6 +258,15 @@ export function CatalogueClient({
                 className="group"
               >
                 <div className="bg-surface-container-lowest rounded-xl shadow-ambient-sm hover:shadow-ambient hover:-translate-y-1 transition-all overflow-hidden h-full flex flex-col">
+                  {res.imageUrl && (
+                    <div className="aspect-video overflow-hidden">
+                      <img
+                        src={res.imageUrl}
+                        alt={res.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
                   <div className="p-5 flex flex-col flex-1">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">

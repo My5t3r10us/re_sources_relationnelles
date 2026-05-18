@@ -74,6 +74,7 @@ export default async function CataloguePage({ searchParams }: PageProps) {
       featured: resource.featured,
       viewCount: resource.viewCount,
       createdAt: resource.createdAt,
+      imageUrl: resource.imageUrl,
       categoryName: category.name,
       categorySlug: category.slug,
     })

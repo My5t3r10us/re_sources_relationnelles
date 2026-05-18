@@ -1,0 +1,11 @@
+appId: com.resourcrelationnelles.app
+name: "Catalogue - browse and filter"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Catalogue"
+- waitForAnimationToEnd
+- assertVisible: "Tous"
+- assertVisible: "Articles"
+- tapOn: "Articles"
+- waitForAnimationToEnd
+- tapOn: "Tous"

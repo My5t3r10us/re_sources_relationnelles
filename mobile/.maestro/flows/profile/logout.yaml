@@ -1,0 +1,15 @@
+appId: com.resourcrelationnelles.app
+name: "Profile - logout"
+---
+- runFlow: ../auth/_login-helper.yaml
+- tapOn: "Profil"
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      text: "Déconnexion"
+    direction: DOWN
+- tapOn: "Déconnexion"
+- assertVisible: "Voulez-vous vous déconnecter ?"
+- tapOn: "Déconnecter"
+- waitForAnimationToEnd
+- assertVisible: "Connexion"

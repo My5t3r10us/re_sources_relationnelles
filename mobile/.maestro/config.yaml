@@ -1,0 +1,4 @@
+appId: com.resourcrelationnelles.app
+---
+- launchApp:
+    clearState: true
