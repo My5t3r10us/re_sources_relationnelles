@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { ArrowRight, MessageSquare, Search, Clock, Bookmark, FileText, Video, FileType2, Activity, Headphones, BookOpen } from "lucide-react";
@@ -112,14 +113,38 @@ export default async function Home() {
               </div>
             </div>
             <div className="flex-1 grid grid-cols-2 gap-4 h-100 md:h-125">
-              <div className="bg-surface-container-high rounded-4xl row-span-2 overflow-hidden" />
-              <div className="bg-surface-container-high rounded-3xl overflow-hidden" />
-              <div className="bg-surface-container-low rounded-3xl p-6 flex flex-col justify-end">
-                <MessageSquare className="w-6 h-6 text-primary mb-2" />
-                <p className="font-bold text-on-surface text-sm">{t("activeNetwork")}</p>
-                <p className="text-xs text-on-surface-variant">
-                  {t("resourcesShared", { count: data.stats.totalResources })}
-                </p>
+              <div className="bg-surface-container-high rounded-4xl row-span-2 overflow-hidden relative">
+                <Image
+                  src="/assets/images/accueil-verticale.jpg"
+                  alt=""
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              <div className="bg-surface-container-high rounded-3xl overflow-hidden relative">
+                <Image
+                  src="/assets/images/accueil-horizontale.png"
+                  alt=""
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              <div className="rounded-3xl overflow-hidden relative flex flex-col justify-end">
+                <Image
+                  src="/assets/images/accueil-carre.jpg"
+                  alt=""
+                  fill
+                  className="object-cover"
+                />
+                <div className="relative z-10 p-6 bg-gradient-to-t from-black/60 to-transparent">
+                  <MessageSquare className="w-6 h-6 text-white mb-2" />
+                  <p className="font-bold text-white text-sm">{t("activeNetwork")}</p>
+                  <p className="text-xs text-white/80">
+                    {t("resourcesShared", { count: data.stats.totalResources })}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
