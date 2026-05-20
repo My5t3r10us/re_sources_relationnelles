@@ -37,6 +37,7 @@ export default function RegisterScreen() {
       const token: string | undefined = res?.token ?? res?.session?.token;
       if (token && res?.user) {
         await setAuth(res.user, token);
+        router.replace('/(tabs)');
       } else {
         setError(res?.error?.message ?? res?.message ?? "Impossible de créer le compte");
       }

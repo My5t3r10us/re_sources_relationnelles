@@ -33,6 +33,9 @@ export default defineConfig({
         "drizzle.config.ts",
         "proxy.ts",
         "next-env.d.ts",
+        "db/seed.ts",
+        "app/api/auth/**",
+        "i18n/**",
       ],
     },
     environmentMatchGlobs: [

@@ -6,8 +6,18 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/link", () => ({
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href}>{children}</a>
+  default: ({
+    href,
+    children,
+    className,
+  }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
+    <a href={href} className={className}>
+      {children}
+    </a>
   ),
 }));
 
@@ -34,8 +44,9 @@ describe("SidebarCatalog", () => {
   });
 
   it("highlights the active category", () => {
-    const { container } = render(<SidebarCatalog categories={categories} activeSlug="anxiete-stress" />);
-    const active = container.querySelector(".text-primary");
-    expect(active).toBeTruthy();
+    render(<SidebarCatalog categories={categories} activeSlug="anxiete-stress" />);
+    const activeLink = screen.getByText("Anxiété").closest("a")!;
+    expect(activeLink.className).toContain("text-primary");
+    expect(activeLink.className).toContain("font-bold");
   });
 });

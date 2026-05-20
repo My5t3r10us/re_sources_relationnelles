@@ -16,7 +16,7 @@ import {
   sessionParticipant,
   sessionMessage,
 } from "@/db/schema";
-import { sql } from "drizzle-orm";
+import { getTableName, sql } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 
 const TABLES_IN_TRUNCATION_ORDER = [
@@ -38,9 +38,10 @@ const TABLES_IN_TRUNCATION_ORDER = [
 ];
 
 export async function resetDb() {
-  for (const table of TABLES_IN_TRUNCATION_ORDER) {
-    await db.execute(sql.raw(`TRUNCATE TABLE "${(table as { _: { name: string } })._.name}" CASCADE`));
-  }
+  // Single TRUNCATE so PostgreSQL handles FK dependencies in one shot via CASCADE +
+  // RESTART IDENTITY. Cheaper than one TRUNCATE per table.
+  const names = TABLES_IN_TRUNCATION_ORDER.map((t) => `"${getTableName(t)}"`).join(", ");
+  await db.execute(sql.raw(`TRUNCATE TABLE ${names} RESTART IDENTITY CASCADE`));
 }
 
 export type TestUserRole = "citizen" | "moderator" | "admin" | "super_admin";

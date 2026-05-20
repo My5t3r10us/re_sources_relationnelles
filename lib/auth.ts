@@ -16,6 +16,7 @@ export const auth = betterAuth({
     "http://localhost:19000",
     "http://localhost:19006",
     "http://10.0.2.2:3000",
+    "https://resource.baptistemoine.dev",
     "re-sources://",
     "exp://*",
   ],

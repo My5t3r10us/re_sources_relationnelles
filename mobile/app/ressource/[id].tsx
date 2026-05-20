@@ -177,8 +177,8 @@ export default function ResourceDetailScreen() {
 
             <View className="flex-row gap-3 mb-6 border-y border-gray-100 py-3">
               <TouchableOpacity onPress={toggleFavorite} className="flex-row items-center">
-                <Ionicons name={resource.isFavorite ? 'heart' : 'heart-outline'} size={20} color={resource.isFavorite ? '#ef4444' : '#9ca3af'} />
-                <Text className={`text-sm ml-1.5 font-medium ${resource.isFavorite ? 'text-red-500' : 'text-gray-400'}`}>
+                <Ionicons name={resource.isFavorite ? 'heart' : 'heart-outline'} size={20} color={resource.isFavorite ? '#ec4899' : '#9ca3af'} />
+                <Text className={`text-sm ml-1.5 font-medium ${resource.isFavorite ? 'text-pink-500' : 'text-gray-400'}`}>
                   Favori
                 </Text>
               </TouchableOpacity>

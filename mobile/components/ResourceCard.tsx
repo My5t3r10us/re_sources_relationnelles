@@ -92,7 +92,7 @@ export function ResourceCard({ resource, onFavoriteToggle }: ResourceCardProps) 
               <Ionicons
                 name={resource.isFavorite ? 'heart' : 'heart-outline'}
                 size={20}
-                color={resource.isFavorite ? '#ef4444' : '#9ca3af'}
+                color={resource.isFavorite ? '#ec4899' : '#9ca3af'}
               />
             </TouchableOpacity>
           )}

@@ -49,6 +49,55 @@ describe("Admin reports", () => {
       .set("Authorization", `Bearer ${admin.token}`);
     expect(res.status).toBe(404);
   });
+
+  it("PUT /resolve 403 for citizen", async () => {
+    const u = await createTestUser();
+    const res = await harness.req().put("/api/v1/admin/reports/x/resolve").set("Authorization", `Bearer ${u.token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("PUT /resolve successfully marks report as resolved", async () => {
+    const admin = await createTestUser({ role: "admin" });
+    const u = await createTestUser();
+    const r = await createTestResource({ authorId: u.id });
+    const reportRes = await harness
+      .req()
+      .post("/api/v1/reports")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ reason: "spam", resourceId: r.id });
+    const reportId = reportRes.body.data.id;
+
+    const res = await harness
+      .req()
+      .put(`/api/v1/admin/reports/${reportId}/resolve`)
+      .set("Authorization", `Bearer ${admin.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ id: reportId, resolved: true });
+  });
+
+  it("GET /admin/reports filters by resolved=true", async () => {
+    const admin = await createTestUser({ role: "admin" });
+    const u = await createTestUser();
+    const r = await createTestResource({ authorId: u.id });
+    const reportRes = await harness
+      .req()
+      .post("/api/v1/reports")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ reason: "spam", resourceId: r.id });
+    await harness
+      .req()
+      .put(`/api/v1/admin/reports/${reportRes.body.data.id}/resolve`)
+      .set("Authorization", `Bearer ${admin.token}`);
+
+    const res = await harness.req().get("/api/v1/admin/reports?resolved=true").set("Authorization", `Bearer ${admin.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.every((rp: { resolved: boolean }) => rp.resolved === true)).toBe(true);
+  });
+
+  it("GET /admin/reports 401 without auth", async () => {
+    const res = await harness.req().get("/api/v1/admin/reports");
+    expect(res.status).toBe(401);
+  });
 });
 
 describe("Admin stats", () => {

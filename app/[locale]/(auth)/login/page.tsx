@@ -3,13 +3,11 @@
 import { useState, Suspense } from "react";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/tableau-de-bord";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -21,11 +19,13 @@ function LoginForm() {
     setError("");
     setLoading(true);
 
+    
+
     const { error } = await authClient.signIn.email(
       { email, password },
       {
         onSuccess: () => {
-          router.push(callbackUrl);
+          router.push("/tableau-de-bord");
         },
         onError: (ctx) => {
           setError(ctx.error.message);

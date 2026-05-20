@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { resource, category, user, resourceFile } from "@/db/schema";
-import { eq, and, or, ilike, desc, count, sql } from "drizzle-orm";
+import { resource, category, user, resourceFile, favorite, completion, savedResource } from "@/db/schema";
+import { eq, and, or, ilike, desc, count, sql, inArray } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { getApiSession, requireApiAuth } from "@/lib/api-auth";
 
@@ -79,7 +79,35 @@ export async function GET(req: Request) {
     .limit(limit)
     .offset(offset);
 
-  return apiSuccess(rows, { page, limit, total: Number(total) });
+  let enriched: Array<(typeof rows)[number] & { isFavorite: boolean; isSaved: boolean; isRead: boolean }> = rows.map((r) => ({
+    ...r,
+    isFavorite: false,
+    isSaved: false,
+    isRead: false,
+  }));
+
+  if (session && rows.length > 0) {
+    const ids = rows.map((r) => r.id);
+    const [favs, saves, comps] = await Promise.all([
+      db.select({ resourceId: favorite.resourceId }).from(favorite)
+        .where(and(eq(favorite.userId, session.id), inArray(favorite.resourceId, ids))),
+      db.select({ resourceId: savedResource.resourceId }).from(savedResource)
+        .where(and(eq(savedResource.userId, session.id), inArray(savedResource.resourceId, ids))),
+      db.select({ resourceId: completion.resourceId }).from(completion)
+        .where(and(eq(completion.userId, session.id), inArray(completion.resourceId, ids))),
+    ]);
+    const favSet = new Set(favs.map((f) => f.resourceId));
+    const saveSet = new Set(saves.map((s) => s.resourceId));
+    const compSet = new Set(comps.map((c) => c.resourceId));
+    enriched = enriched.map((r) => ({
+      ...r,
+      isFavorite: favSet.has(r.id),
+      isSaved: saveSet.has(r.id),
+      isRead: compSet.has(r.id),
+    }));
+  }
+
+  return apiSuccess(enriched, { page, limit, total: Number(total) });
 }
 
 export async function POST(req: Request) {

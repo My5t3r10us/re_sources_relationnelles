@@ -62,4 +62,57 @@ describe("s3", () => {
       expect(a).toBe(b);
     });
   });
+
+  describe("uploadObject", () => {
+    it("sends PutObjectCommand with correct params", async () => {
+      const sendMock = vi.fn().mockResolvedValue({});
+      vi.doMock("@aws-sdk/client-s3", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("@aws-sdk/client-s3")>();
+        return {
+          ...actual,
+          S3Client: vi.fn().mockImplementation(() => ({ send: sendMock })),
+          PutObjectCommand: actual.PutObjectCommand,
+        };
+      });
+
+      process.env.AWS_BUCKET = "test-bucket";
+      const { uploadObject } = await import("@/lib/s3");
+      const body = Buffer.from("hello");
+      await uploadObject("path/to/file.png", body, "image/png");
+
+      expect(sendMock).toHaveBeenCalledOnce();
+      const [cmd] = sendMock.mock.calls[0];
+      expect(cmd.input).toMatchObject({
+        Bucket: "test-bucket",
+        Key: "path/to/file.png",
+        Body: body,
+        ContentType: "image/png",
+      });
+    });
+  });
+
+  describe("deleteObject", () => {
+    it("sends DeleteObjectCommand with correct key", async () => {
+      const sendMock = vi.fn().mockResolvedValue({});
+      vi.doMock("@aws-sdk/client-s3", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("@aws-sdk/client-s3")>();
+        return {
+          ...actual,
+          S3Client: vi.fn().mockImplementation(() => ({ send: sendMock })),
+          DeleteObjectCommand: actual.DeleteObjectCommand,
+        };
+      });
+
+      process.env.AWS_BUCKET = "test-bucket";
+      const { deleteObject } = await import("@/lib/s3");
+      await deleteObject("path/to/file.png");
+
+      expect(sendMock).toHaveBeenCalledOnce();
+      const [cmd] = sendMock.mock.calls[0];
+      expect(cmd.input).toMatchObject({
+        Bucket: "test-bucket",
+        Key: "path/to/file.png",
+      });
+    });
+  });
 });

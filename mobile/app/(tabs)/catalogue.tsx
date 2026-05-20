@@ -65,7 +65,13 @@ export default function CatalogueScreen() {
   }
 
   async function handleFavorite(id: string) {
-    await resources.toggleFavorite(id);
+    setItems((prev) => prev.map((r) => r.id === id ? { ...r, isFavorite: !r.isFavorite } : r));
+    const res = await resources.toggleFavorite(id);
+    if (res.data) {
+      setItems((prev) => prev.map((r) => r.id === id ? { ...r, isFavorite: res.data!.isFavorite } : r));
+    } else {
+      setItems((prev) => prev.map((r) => r.id === id ? { ...r, isFavorite: !r.isFavorite } : r));
+    }
   }
 
   return (

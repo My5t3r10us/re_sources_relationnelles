@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { resource, category, user, resourceFile, favorite, completion, savedResource } from "@/db/schema";
-import { eq, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { getApiSession, requireApiAuth } from "@/lib/api-auth";
 import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
@@ -62,17 +62,17 @@ export async function GET(req: Request, { params }: Params) {
 
   if (session) {
     const [fav] = await db.select({ id: favorite.id }).from(favorite)
-      .where(eq(favorite.userId, session.id) as never)
+      .where(and(eq(favorite.userId, session.id), eq(favorite.resourceId, id)))
       .limit(1);
     isFavorite = !!fav;
 
     const [comp] = await db.select({ id: completion.id }).from(completion)
-      .where(eq(completion.userId, session.id) as never)
+      .where(and(eq(completion.userId, session.id), eq(completion.resourceId, id)))
       .limit(1);
     isRead = !!comp;
 
     const [saved] = await db.select({ id: savedResource.id }).from(savedResource)
-      .where(eq(savedResource.userId, session.id) as never)
+      .where(and(eq(savedResource.userId, session.id), eq(savedResource.resourceId, id)))
       .limit(1);
     isSaved = !!saved;
   }

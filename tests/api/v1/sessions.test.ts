@@ -147,4 +147,165 @@ describe("Sessions API", () => {
     const res = await harness.req().post(`/api/v1/sessions/${code}/leave`).set("Authorization", `Bearer ${host.token}`);
     expect(res.body.data.left).toBe(true);
   });
+
+  it("GET /sessions/[code] returns session with participants list", async () => {
+    const host = await createTestUser();
+    const r = await createTestResource({ authorId: host.id, status: "published", mediaType: "protocol" });
+    const created = await createCollabSession(host.token, r.id);
+    const code = created.body.data.shareCode;
+
+    const guest = await createTestUser();
+    await harness.req().post(`/api/v1/sessions/${code}/join`).set("Authorization", `Bearer ${guest.token}`);
+
+    const res = await harness.req().get(`/api/v1/sessions/${code}`).set("Authorization", `Bearer ${host.token}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data.participants)).toBe(true);
+    expect(res.body.data.participants.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.data.participants[0]).toHaveProperty("userId");
+    expect(res.body.data.participants[0]).toHaveProperty("userName");
+  });
+
+  it("DELETE /sessions/[code] is idempotent when already ended", async () => {
+    const host = await createTestUser();
+    const r = await createTestResource({ authorId: host.id, status: "published", mediaType: "exercise" });
+    const created = await createCollabSession(host.token, r.id);
+    const code = created.body.data.shareCode;
+
+    await harness.req().delete(`/api/v1/sessions/${code}`).set("Authorization", `Bearer ${host.token}`);
+    const second = await harness.req().delete(`/api/v1/sessions/${code}`).set("Authorization", `Bearer ${host.token}`);
+    expect(second.status).toBe(200);
+    expect(second.body.data.status).toBe("ended");
+  });
+
+  it("GET /messages returns messages for participant", async () => {
+    const host = await createTestUser();
+    const r = await createTestResource({ authorId: host.id, status: "published", mediaType: "exercise" });
+    const created = await createCollabSession(host.token, r.id);
+    const code = created.body.data.shareCode;
+
+    await harness
+      .req()
+      .post(`/api/v1/sessions/${code}/messages`)
+      .set("Authorization", `Bearer ${host.token}`)
+      .send({ content: "Premier message" });
+
+    const res = await harness.req().get(`/api/v1/sessions/${code}/messages`).set("Authorization", `Bearer ${host.token}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data[0].content).toBe("Premier message");
+    expect(res.body.data[0]).toHaveProperty("authorName");
+  });
+
+  it("GET /messages filters by ?since parameter", async () => {
+    const host = await createTestUser();
+    const r = await createTestResource({ authorId: host.id, status: "published", mediaType: "exercise" });
+    const created = await createCollabSession(host.token, r.id);
+    const code = created.body.data.shareCode;
+
+    await harness
+      .req()
+      .post(`/api/v1/sessions/${code}/messages`)
+      .set("Authorization", `Bearer ${host.token}`)
+      .send({ content: "Old message" });
+
+    const since = new Date().toISOString();
+
+    await harness
+      .req()
+      .post(`/api/v1/sessions/${code}/messages`)
+      .set("Authorization", `Bearer ${host.token}`)
+      .send({ content: "New message" });
+
+    const res = await harness
+      .req()
+      .get(`/api/v1/sessions/${code}/messages?since=${encodeURIComponent(since)}`)
+      .set("Authorization", `Bearer ${host.token}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+
+  it("GET /messages rejects non-participants", async () => {
+    const host = await createTestUser();
+    const r = await createTestResource({ authorId: host.id, status: "published", mediaType: "exercise" });
+    const created = await createCollabSession(host.token, r.id);
+    const code = created.body.data.shareCode;
+
+    const stranger = await createTestUser();
+    const res = await harness
+      .req()
+      .get(`/api/v1/sessions/${code}/messages`)
+      .set("Authorization", `Bearer ${stranger.token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("GET /messages 404 for unknown code", async () => {
+    const u = await createTestUser();
+    const res = await harness
+      .req()
+      .get("/api/v1/sessions/UNKNOWN1/messages")
+      .set("Authorization", `Bearer ${u.token}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("POST /messages 404 for unknown code", async () => {
+    const u = await createTestUser();
+    const res = await harness
+      .req()
+      .post("/api/v1/sessions/UNKNOWN1/messages")
+      .set("Authorization", `Bearer ${u.token}`)
+      .send({ content: "hello" });
+    expect(res.status).toBe(404);
+  });
+
+  it("POST /messages rejects sending to ended session", async () => {
+    const host = await createTestUser();
+    const r = await createTestResource({ authorId: host.id, status: "published", mediaType: "exercise" });
+    const created = await createCollabSession(host.token, r.id);
+    const code = created.body.data.shareCode;
+
+    await harness.req().delete(`/api/v1/sessions/${code}`).set("Authorization", `Bearer ${host.token}`);
+
+    const res = await harness
+      .req()
+      .post(`/api/v1/sessions/${code}/messages`)
+      .set("Authorization", `Bearer ${host.token}`)
+      .send({ content: "too late" });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("INVALID_STATE");
+  });
+
+  it("POST /join requires auth", async () => {
+    const res = await harness.req().post("/api/v1/sessions/UNKNOWN1/join");
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /join 404 for unknown session", async () => {
+    const u = await createTestUser();
+    const res = await harness.req().post("/api/v1/sessions/UNKNOWN1/join").set("Authorization", `Bearer ${u.token}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("POST /join rejects ended session", async () => {
+    const host = await createTestUser();
+    const r = await createTestResource({ authorId: host.id, status: "published", mediaType: "exercise" });
+    const created = await createCollabSession(host.token, r.id);
+    const code = created.body.data.shareCode;
+
+    await harness.req().delete(`/api/v1/sessions/${code}`).set("Authorization", `Bearer ${host.token}`);
+
+    const guest = await createTestUser();
+    const res = await harness.req().post(`/api/v1/sessions/${code}/join`).set("Authorization", `Bearer ${guest.token}`);
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /leave requires auth", async () => {
+    const res = await harness.req().post("/api/v1/sessions/UNKNOWN1/leave");
+    expect(res.status).toBe(401);
+  });
+
+  it("POST /leave 404 for unknown session", async () => {
+    const u = await createTestUser();
+    const res = await harness.req().post("/api/v1/sessions/UNKNOWN1/leave").set("Authorization", `Bearer ${u.token}`);
+    expect(res.status).toBe(404);
+  });
 });

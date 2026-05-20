@@ -28,6 +28,7 @@ export default function LoginScreen() {
       const token: string | undefined = res?.token ?? res?.session?.token;
       if (token && res?.user) {
         await setAuth(res.user, token);
+        router.replace('/(tabs)');
       } else {
         setError(res?.error?.message ?? res?.message ?? 'Email ou mot de passe incorrect');
       }

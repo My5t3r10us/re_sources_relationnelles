@@ -27,8 +27,18 @@ export default function HomeScreen() {
   useEffect(() => { load(); }, [load]);
 
   async function handleFavorite(id: string) {
-    await resources.toggleFavorite(id);
-    load();
+    const flip = (r: Resource) => r.id === id ? { ...r, isFavorite: !r.isFavorite } : r;
+    setFeatured((prev) => prev.map(flip));
+    setRecent((prev) => prev.map(flip));
+    const res = await resources.toggleFavorite(id);
+    if (res.data) {
+      const apply = (r: Resource) => r.id === id ? { ...r, isFavorite: res.data!.isFavorite } : r;
+      setFeatured((prev) => prev.map(apply));
+      setRecent((prev) => prev.map(apply));
+    } else {
+      setFeatured((prev) => prev.map(flip));
+      setRecent((prev) => prev.map(flip));
+    }
   }
 
   if (loading) {
