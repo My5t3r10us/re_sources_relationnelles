@@ -39,6 +39,7 @@ vi.mock("@/app/[locale]/(admin)/admin/actions", () => ({
   updateUserRole: vi.fn().mockResolvedValue(undefined),
   toggleUserActive: vi.fn().mockResolvedValue(undefined),
   updateUserRoleAsAdmin: vi.fn().mockResolvedValue(undefined),
+  toggleFeaturedResource: vi.fn().mockResolvedValue(undefined),
   createAdminUser: vi.fn().mockResolvedValue({ id: "new-id" }),
   createCategory: vi.fn().mockResolvedValue(undefined),
   updateCategory: vi.fn().mockResolvedValue(undefined),
@@ -58,26 +59,14 @@ vi.mock("@/components/ui/button", () => ({
 }));
 vi.mock("@/components/ui/report-button", () => ({ ReportButton: () => <button>Report</button> }));
 vi.mock("@/components/ui/emoji-picker", () => ({
-  EmojiPicker: ({ onSelect }: { onSelect: (e: string) => void }) => (
-    <button onClick={() => onSelect("😀")}>Pick emoji</button>
+  EmojiPicker: ({ onSelect, onChange }: { onSelect?: (e: string) => void; onChange?: (e: string) => void }) => (
+    <button onClick={() => (onSelect ?? onChange ?? (() => {}))("😀")}>Pick emoji</button>
   ),
 }));
 vi.mock("@/components/editor/wysiwyg-editor", () => ({
   WysiwygEditor: ({ onChange }: { onChange: (v: string) => void }) => (
     <textarea onChange={(e) => onChange(e.target.value)} data-testid="editor" />
   ),
-}));
-
-// ─── Home page mocks (needed for server-component test at EOF) ─────────────
-vi.mock("@/components/layout/navbar", () => ({ Navbar: () => <nav>Navbar</nav> }));
-vi.mock("@/components/layout/footer", () => ({ Footer: () => <footer>Footer</footer> }));
-vi.mock("@/lib/home-data", () => ({
-  getHomeData: vi.fn().mockResolvedValue({
-    featured: [],
-    recent: [],
-    popularCategories: [],
-    stats: { totalResources: 0 },
-  }),
 }));
 
 const mockFetch = vi.fn();
@@ -541,10 +530,34 @@ describe("stats-export.tsx", () => {
 // AdminResourceActions
 // ═══════════════════════════════════════════════════════════════
 describe("resource-admin-actions.tsx", () => {
-  it("renders resource action buttons", async () => {
+  it("renders resource action buttons (pending, not featured)", async () => {
     const { AdminResourceActions } = await import("@/app/[locale]/(admin)/admin/ressources/resource-admin-actions");
-    render(<AdminResourceActions resourceId="r1" currentStatus="pending" currentFeatured={false} />);
+    render(<AdminResourceActions resourceId="r1" currentStatus="pending" isFeatured={false} />);
     expect(document.body).toBeTruthy();
+  });
+
+  it("renders with featured resource (isFeatured=true)", async () => {
+    const { AdminResourceActions } = await import("@/app/[locale]/(admin)/admin/ressources/resource-admin-actions");
+    render(<AdminResourceActions resourceId="r1" currentStatus="published" isFeatured={true} />);
+    expect(document.body).toBeTruthy();
+  });
+
+  it("clicks publish button", async () => {
+    const { updateResourceStatus } = await import("@/app/[locale]/(admin)/admin/actions");
+    const { AdminResourceActions } = await import("@/app/[locale]/(admin)/admin/ressources/resource-admin-actions");
+    render(<AdminResourceActions resourceId="r1" currentStatus="pending" isFeatured={false} />);
+    const publishBtn = screen.getByTitle("Publier");
+    await act(async () => { fireEvent.click(publishBtn); });
+    await waitFor(() => expect(updateResourceStatus).toHaveBeenCalledWith("r1", "published"));
+  });
+
+  it("clicks star/feature button", async () => {
+    const { toggleFeaturedResource } = await import("@/app/[locale]/(admin)/admin/actions");
+    const { AdminResourceActions } = await import("@/app/[locale]/(admin)/admin/ressources/resource-admin-actions");
+    render(<AdminResourceActions resourceId="r1" currentStatus="published" isFeatured={false} />);
+    const starBtn = screen.getByTitle("Mettre en avant");
+    await act(async () => { fireEvent.click(starBtn); });
+    await waitFor(() => expect(toggleFeaturedResource).toHaveBeenCalledWith("r1", true));
   });
 });
 
@@ -624,10 +637,59 @@ describe("session-client.tsx", () => {
     expect(document.body).toBeTruthy();
   });
 
+  it("renders with initial messages (covers message list rendering)", async () => {
+    // Make fetch return messages from both other user and current user (covers both branches)
+    mockFetch.mockImplementation((_url: string) => {
+      if (_url.includes("/messages")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [
+              { id: "m1", content: "Hello from other", createdAt: new Date().toISOString(), authorId: "u2", authorName: "Bob" },
+              { id: "m2", content: "My message", createdAt: new Date().toISOString(), authorId: "u1", authorName: "Alice" },
+            ],
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: { status: "active", participants: [] } }) });
+    });
+    const { SessionClient } = await import("@/app/[locale]/(public)/session/[code]/session-client");
+    await act(async () => {
+      render(<SessionClient {...baseProps} />);
+    });
+    expect(document.body).toBeTruthy();
+  });
+
+  it("handles Enter key in textarea to send message", async () => {
+    // GET → empty arrays, POST (send) → single message object
+    mockFetch.mockImplementation((_url: string, opts?: RequestInit) => {
+      if (opts?.method === "POST") {
+        return Promise.resolve({ ok: true, json: async () => ({ data: { id: "m1", content: "Hi", createdAt: new Date().toISOString(), authorId: "u1", authorName: "Alice" } }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: [] }) });
+    });
+    const { SessionClient } = await import("@/app/[locale]/(public)/session/[code]/session-client");
+    await act(async () => { render(<SessionClient {...baseProps} />); });
+    const textarea = document.querySelector("textarea") as HTMLTextAreaElement;
+    if (textarea) {
+      fireEvent.change(textarea, { target: { value: "Hello" } });
+      await act(async () => {
+        fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+      });
+    }
+    expect(document.body).toBeTruthy();
+  });
+
   it("sends a message", async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: { id: "m1", content: "Hello", createdAt: new Date().toISOString(), authorId: "u1", authorName: "Alice" } }),
+    // GET requests return empty arrays; POST (send) returns a single message object
+    mockFetch.mockImplementation((_url: string, opts?: RequestInit) => {
+      if (opts?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ data: { id: "m1", content: "Hello!", createdAt: new Date().toISOString(), authorId: "u1", authorName: "Alice" } }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ data: [] }) });
     });
 
     const { SessionClient } = await import("@/app/[locale]/(public)/session/[code]/session-client");
@@ -649,9 +711,187 @@ describe("session-client.tsx", () => {
 // Home page
 // ═══════════════════════════════════════════════════════════════
 describe("app/[locale]/page.tsx (home)", () => {
-  it("renders home page", async () => {
+  beforeAll(() => {
+    vi.doMock("@/components/layout/navbar", () => ({ Navbar: () => <nav>Navbar</nav> }));
+    vi.doMock("@/components/layout/footer", () => ({ Footer: () => <footer>Footer</footer> }));
+    vi.doMock("@/lib/home-data", () => ({
+      getHomeData: vi.fn().mockResolvedValue({
+        featured: [],
+        recent: [],
+        popularCategories: [],
+        stats: { totalResources: 0 },
+      }),
+    }));
+  });
+
+  afterAll(() => {
+    vi.unmock("@/components/layout/navbar");
+    vi.unmock("@/components/layout/footer");
+    vi.unmock("@/lib/home-data");
+    vi.resetModules();
+  });
+
+  it("renders home page (empty state)", async () => {
+    vi.resetModules();
     const { default: HomePage } = await import("@/app/[locale]/page");
     const result = await HomePage();
     expect(result).toBeTruthy();
+  });
+
+  it("renders home page with featured and recent resources (full render)", async () => {
+    vi.resetModules();
+    const { getHomeData } = await import("@/lib/home-data");
+    vi.mocked(getHomeData).mockResolvedValueOnce({
+      featured: [
+        { id: "f1", title: "Featured", summary: "Sum", mediaType: "article", imageUrl: "https://img.example.com/f.jpg", categoryName: "Santé", readingTime: 5, viewCount: 100 },
+      ],
+      recent: [
+        { id: "r1", title: "Recent", summary: "Sum", mediaType: "video", imageUrl: null, categoryName: null, readingTime: null, viewCount: 50 },
+        { id: "r2", title: "Old", summary: null, mediaType: "exercise", imageUrl: null, categoryName: null, readingTime: 3, viewCount: 5 },
+      ],
+      popularCategories: [{ id: "c1", name: "Santé", slug: "sante", icon: "💚" }],
+      stats: { totalResources: 1500 },
+    } as any);
+    const { default: HomePage } = await import("@/app/[locale]/page");
+    const result = await HomePage();
+    // Render the returned JSX to execute ResourceTile and other sub-components
+    await act(async () => { render(result as any); });
+    expect(document.body).toBeTruthy();
+  });
+
+  it("renders home page with resources without imageUrl and no readingTime", async () => {
+    vi.resetModules();
+    const { getHomeData } = await import("@/lib/home-data");
+    vi.mocked(getHomeData).mockResolvedValueOnce({
+      featured: [],
+      recent: [
+        { id: "r1", title: "Recent Audio", summary: "Sum", mediaType: "audio", imageUrl: null, categoryName: null, readingTime: null, viewCount: 0 },
+      ],
+      popularCategories: [],
+      stats: { totalResources: 999 },
+    } as any);
+    const { default: HomePage } = await import("@/app/[locale]/page");
+    const result = await HomePage();
+    await act(async () => { render(result as any); });
+    expect(document.body).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CreateUserModal extended
+// ═══════════════════════════════════════════════════════════════
+describe("create-user-modal.tsx (extended)", () => {
+  it("opens modal and renders form", async () => {
+    const { CreateUserModal } = await import("@/app/[locale]/(admin)/admin/utilisateurs/create-user-modal");
+    render(<CreateUserModal />);
+    const openBtn = screen.getByText("Créer un compte");
+    await act(async () => { fireEvent.click(openBtn); });
+    expect(document.querySelector("form")).toBeTruthy();
+  });
+
+  it("submits form and calls createAdminUser", async () => {
+    const { createAdminUser } = await import("@/app/[locale]/(admin)/admin/actions");
+    const { CreateUserModal } = await import("@/app/[locale]/(admin)/admin/utilisateurs/create-user-modal");
+    render(<CreateUserModal />);
+    await act(async () => { fireEvent.click(screen.getByText("Créer un compte")); });
+    const inputs = document.querySelectorAll("input");
+    fireEvent.change(inputs[0], { target: { value: "Admin Test" } });
+    fireEvent.change(inputs[1], { target: { value: "admin@test.com" } });
+    fireEvent.change(inputs[2], { target: { value: "password123" } });
+    const form = document.querySelector("form") as HTMLFormElement;
+    await act(async () => { fireEvent.submit(form); });
+    await waitFor(() => expect(createAdminUser).toHaveBeenCalled());
+  });
+
+  it("shows error when createAdminUser throws", async () => {
+    const { createAdminUser } = await import("@/app/[locale]/(admin)/admin/actions");
+    vi.mocked(createAdminUser).mockRejectedValueOnce(new Error("Email already exists"));
+    const { CreateUserModal } = await import("@/app/[locale]/(admin)/admin/utilisateurs/create-user-modal");
+    render(<CreateUserModal />);
+    await act(async () => { fireEvent.click(screen.getByText("Créer un compte")); });
+    const inputs = document.querySelectorAll("input");
+    fireEvent.change(inputs[0], { target: { value: "Admin Test" } });
+    fireEvent.change(inputs[1], { target: { value: "admin@test.com" } });
+    fireEvent.change(inputs[2], { target: { value: "password123" } });
+    const form = document.querySelector("form") as HTMLFormElement;
+    await act(async () => { fireEvent.submit(form); });
+    await waitFor(() => expect(document.body.textContent).toContain("Email already exists"));
+  });
+
+  it("cancels modal and resets form", async () => {
+    const { CreateUserModal } = await import("@/app/[locale]/(admin)/admin/utilisateurs/create-user-modal");
+    render(<CreateUserModal />);
+    await act(async () => { fireEvent.click(screen.getByText("Créer un compte")); });
+    expect(document.querySelector("form")).toBeTruthy();
+    const cancelBtn = screen.getByText("Annuler");
+    await act(async () => { fireEvent.click(cancelBtn); });
+    expect(document.querySelector("form")).toBeFalsy();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// UserActions extended
+// ═══════════════════════════════════════════════════════════════
+describe("user-actions.tsx (extended)", () => {
+  it("opens role menu and changes role", async () => {
+    const { updateUserRole } = await import("@/app/[locale]/(admin)/admin/actions");
+    const { UserActions } = await import("@/app/[locale]/(admin)/admin/utilisateurs/user-actions");
+    render(<UserActions userId="u1" currentRole="citizen" isActive={true} viewerRole="admin" />);
+    const pencilBtn = screen.getByLabelText("Modifier le rôle");
+    await act(async () => { fireEvent.click(pencilBtn); });
+    const adminRole = screen.getByText("Admin");
+    await act(async () => { fireEvent.click(adminRole); });
+    await waitFor(() => expect(updateUserRole).toHaveBeenCalledWith("u1", "admin"));
+  });
+
+  it("opens role menu as super_admin and uses updateUserRoleAsAdmin", async () => {
+    const { updateUserRoleAsAdmin } = await import("@/app/[locale]/(admin)/admin/actions");
+    const { UserActions } = await import("@/app/[locale]/(admin)/admin/utilisateurs/user-actions");
+    render(<UserActions userId="u1" currentRole="citizen" isActive={true} viewerRole="super_admin" />);
+    const pencilBtn = screen.getByLabelText("Modifier le rôle");
+    await act(async () => { fireEvent.click(pencilBtn); });
+    const superAdminRole = screen.getByText("Super-Admin");
+    await act(async () => { fireEvent.click(superAdminRole); });
+    await waitFor(() => expect(updateUserRoleAsAdmin).toHaveBeenCalledWith("u1", "super_admin"));
+  });
+
+  it("toggles user active status", async () => {
+    const { toggleUserActive } = await import("@/app/[locale]/(admin)/admin/actions");
+    const { UserActions } = await import("@/app/[locale]/(admin)/admin/utilisateurs/user-actions");
+    render(<UserActions userId="u1" currentRole="citizen" isActive={true} viewerRole="admin" />);
+    const banBtn = screen.getByLabelText("Désactiver");
+    await act(async () => { fireEvent.click(banBtn); });
+    await waitFor(() => expect(toggleUserActive).toHaveBeenCalledWith("u1"));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CategoryRow edit state
+// ═══════════════════════════════════════════════════════════════
+describe("category-actions.tsx (edit state)", () => {
+  it("enters edit mode and saves", async () => {
+    const { updateCategory } = await import("@/app/[locale]/(admin)/admin/actions");
+    const { CategoryRow } = await import("@/app/[locale]/(admin)/admin/categories/category-actions");
+    render(<CategoryRow id="c1" name="Santé" slug="sante" description="Desc" icon="💚" resourceCount={3} />);
+    // First button is the pencil/edit button in non-editing state
+    const buttons = document.querySelectorAll("button");
+    await act(async () => { fireEvent.click(buttons[0]); }); // enter edit mode
+    // In editing state: [EmojiPicker button, Check button, X button]
+    const editingButtons = document.querySelectorAll("button");
+    // The Check button (handleSave) is the second button (index 1)
+    await act(async () => { fireEvent.click(editingButtons[1]); });
+    await waitFor(() => expect(updateCategory).toHaveBeenCalled());
+  });
+
+  it("enters edit mode and cancels", async () => {
+    const { CategoryRow } = await import("@/app/[locale]/(admin)/admin/categories/category-actions");
+    render(<CategoryRow id="c1" name="Santé" slug="sante" description={null} icon={null} resourceCount={0} />);
+    const buttons = document.querySelectorAll("button");
+    await act(async () => { fireEvent.click(buttons[0]); }); // enter edit mode
+    const editingButtons = document.querySelectorAll("button");
+    // X button (cancel) is the third button (index 2)
+    await act(async () => { fireEvent.click(editingButtons[2]); });
+    // Should be back to non-editing state showing name
+    expect(screen.getAllByText("Santé").length).toBeGreaterThan(0);
   });
 });

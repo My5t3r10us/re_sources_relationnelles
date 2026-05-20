@@ -212,6 +212,20 @@ describe("admin/actions.ts", () => {
       await expect(createAdminUser({ name: "Alice", email: "alice@test.com", password: "pass", role: "admin" })).rejects.toThrow("Email already taken");
     });
   });
+
+  describe("updateUserRoleAsAdmin", () => {
+    it("throws when not super_admin", async () => {
+      setupAdminAuth();
+      const { updateUserRoleAsAdmin } = await import("@/app/[locale]/(admin)/admin/actions");
+      await expect(updateUserRoleAsAdmin("u1", "citizen")).rejects.toThrow();
+    });
+
+    it("updates user role as super_admin", async () => {
+      setupSuperAdminAuth();
+      const { updateUserRoleAsAdmin } = await import("@/app/[locale]/(admin)/admin/actions");
+      await expect(updateUserRoleAsAdmin("u1", "admin")).resolves.toBeUndefined();
+    });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════

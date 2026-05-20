@@ -69,6 +69,7 @@ vi.mock("@/app/[locale]/(public)/publier/publish-actions", () => ({
   publishResource: vi.fn().mockResolvedValue({ success: true }),
   updateResource: vi.fn().mockResolvedValue({ success: true }),
   saveDraft: vi.fn().mockResolvedValue({ success: true }),
+  submitDraftForReview: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockSession = { user: { id: "u1", name: "Alice Test", email: "alice@test.com", role: "citizen" } };
@@ -184,6 +185,31 @@ describe("app/[locale]/(public)/mes-ressources/submit-button.tsx", () => {
     const { SubmitDraftButton } = await import("@/app/[locale]/(public)/mes-ressources/submit-button");
     render(<SubmitDraftButton resourceId="r1" />);
     expect(document.body).toBeTruthy();
+  });
+
+  it("clicks submit button and calls submitDraftForReview", async () => {
+    const { render, screen, fireEvent, waitFor, act } = await import("@testing-library/react");
+    vi.unmock("@/app/[locale]/(public)/mes-ressources/submit-button");
+    vi.resetModules();
+    const { SubmitDraftButton } = await import("@/app/[locale]/(public)/mes-ressources/submit-button");
+    const { submitDraftForReview } = await import("@/app/[locale]/(public)/publier/publish-actions");
+    render(<SubmitDraftButton resourceId="r1" />);
+    const btn = screen.getByTitle("Soumettre ce brouillon à la modération");
+    await act(async () => { fireEvent.click(btn); });
+    await waitFor(() => expect(submitDraftForReview).toHaveBeenCalledWith("r1"));
+  });
+
+  it("shows error when submitDraftForReview throws", async () => {
+    const { render, screen, fireEvent, waitFor, act } = await import("@testing-library/react");
+    vi.unmock("@/app/[locale]/(public)/mes-ressources/submit-button");
+    vi.resetModules();
+    const { submitDraftForReview } = await import("@/app/[locale]/(public)/publier/publish-actions");
+    vi.mocked(submitDraftForReview).mockRejectedValueOnce(new Error("Not allowed"));
+    const { SubmitDraftButton } = await import("@/app/[locale]/(public)/mes-ressources/submit-button");
+    render(<SubmitDraftButton resourceId="r1" />);
+    const btn = screen.getByTitle("Soumettre ce brouillon à la modération");
+    await act(async () => { fireEvent.click(btn); });
+    await waitFor(() => expect(document.body.textContent).toContain("Not allowed"));
   });
 });
 

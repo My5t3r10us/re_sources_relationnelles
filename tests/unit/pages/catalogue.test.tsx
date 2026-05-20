@@ -159,7 +159,56 @@ describe("app/[locale]/(public)/catalogue/catalogue-client.tsx", () => {
         search=""
       />
     );
-    // Should render without crash
+    expect(document.body).toBeTruthy();
+  });
+
+  it("renders featured resource without imageUrl and without readingTime", async () => {
+    const { render } = await import("@testing-library/react");
+    vi.resetModules();
+    vi.unmock("@/app/[locale]/(public)/catalogue/catalogue-client");
+    const { CatalogueClient } = await import("@/app/[locale]/(public)/catalogue/catalogue-client");
+
+    const resources = [
+      { id: "f1", title: "Featured No Image", summary: "Sum", mediaType: "exercise" as const, readingTime: null, featured: true, viewCount: 10, createdAt: new Date(), imageUrl: null, categoryName: null, categorySlug: null },
+    ];
+
+    render(
+      <CatalogueClient
+        resources={resources}
+        total={1}
+        currentPage={1}
+        totalPages={1}
+        activeMedia=""
+        activeSort="recent"
+        search=""
+      />
+    );
+    expect(document.body).toBeTruthy();
+  });
+
+  it("renders with featured resource and various media types", async () => {
+    const { render } = await import("@testing-library/react");
+    vi.resetModules();
+    vi.unmock("@/app/[locale]/(public)/catalogue/catalogue-client");
+    const { CatalogueClient } = await import("@/app/[locale]/(public)/catalogue/catalogue-client");
+
+    const resources = [
+      { id: "f1", title: "Featured", summary: "Sum", mediaType: "article" as const, readingTime: 3, featured: true, viewCount: 100, createdAt: new Date(), imageUrl: "https://img.example.com/img.jpg", categoryName: "Santé", categorySlug: "sante" },
+      { id: "r1", title: "PDF Resource", summary: "Sum", mediaType: "pdf" as const, readingTime: null, featured: false, viewCount: 5, createdAt: new Date(), imageUrl: null, categoryName: null, categorySlug: null },
+      { id: "r2", title: "Audio Resource", summary: "Sum", mediaType: "audio" as const, readingTime: null, featured: false, viewCount: 2, createdAt: new Date(), imageUrl: "https://img.example.com/a.jpg", categoryName: null, categorySlug: null },
+    ];
+
+    render(
+      <CatalogueClient
+        resources={resources}
+        total={3}
+        currentPage={1}
+        totalPages={3}
+        activeMedia="article"
+        activeSort="populaire"
+        search="test"
+      />
+    );
     expect(document.body).toBeTruthy();
   });
 });

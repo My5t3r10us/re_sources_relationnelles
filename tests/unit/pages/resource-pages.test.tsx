@@ -148,6 +148,62 @@ describe("app/[locale]/(public)/ressource/[id]/page.tsx", () => {
     const result = await Page({ params: Promise.resolve({ id: "r1" }) });
     expect(result).toBeTruthy();
   });
+
+  it("renders video resource with URL content", async () => {
+    const videoRes = { ...mockResource, mediaType: "video", content: "https://www.youtube.com/watch?v=abc123" };
+    qData = [[videoRes], []];
+    vi.resetModules();
+    const { default: Page } = await import("@/app/[locale]/(public)/ressource/[id]/page");
+    const result = await Page({ params: Promise.resolve({ id: "r1" }) });
+    expect(result).toBeTruthy();
+  });
+
+  it("renders video resource with non-URL content (markdown)", async () => {
+    const videoRes = { ...mockResource, mediaType: "video", content: "# Video description" };
+    qData = [[videoRes], []];
+    vi.resetModules();
+    const { default: Page } = await import("@/app/[locale]/(public)/ressource/[id]/page");
+    const result = await Page({ params: Promise.resolve({ id: "r1" }) });
+    expect(result).toBeTruthy();
+  });
+
+  it("renders audio resource with URL content", async () => {
+    const audioRes = { ...mockResource, mediaType: "audio", content: "https://example.com/audio.mp3" };
+    qData = [[audioRes], []];
+    vi.resetModules();
+    const { default: Page } = await import("@/app/[locale]/(public)/ressource/[id]/page");
+    const result = await Page({ params: Promise.resolve({ id: "r1" }) });
+    expect(result).toBeTruthy();
+  });
+
+  it("renders pdf resource with URL content", async () => {
+    const pdfRes = { ...mockResource, mediaType: "pdf", content: "https://example.com/doc.pdf" };
+    qData = [[pdfRes], []];
+    vi.resetModules();
+    const { default: Page } = await import("@/app/[locale]/(public)/ressource/[id]/page");
+    const result = await Page({ params: Promise.resolve({ id: "r1" }) });
+    expect(result).toBeTruthy();
+  });
+
+  it("renders exercise with logged-in user (collaborative CTA visible)", async () => {
+    const exerciseRes = { ...mockResource, mediaType: "exercise", status: "published" };
+    mockGetServerSession.mockResolvedValue(mockSession);
+    // resource, comments, liked, fav, saved, read
+    qData = [[exerciseRes], [], [], [], [], []];
+    vi.resetModules();
+    const { default: Page } = await import("@/app/[locale]/(public)/ressource/[id]/page");
+    const result = await Page({ params: Promise.resolve({ id: "r1" }) });
+    expect(result).toBeTruthy();
+  });
+
+  it("renders video with youtu.be URL", async () => {
+    const videoRes = { ...mockResource, mediaType: "video", content: "https://youtu.be/abc123" };
+    qData = [[videoRes], []];
+    vi.resetModules();
+    const { default: Page } = await import("@/app/[locale]/(public)/ressource/[id]/page");
+    const result = await Page({ params: Promise.resolve({ id: "r1" }) });
+    expect(result).toBeTruthy();
+  });
 });
 
 // ─── Modifier page ──────────────────────────────────────────────────────────
