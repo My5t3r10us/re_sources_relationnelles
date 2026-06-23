@@ -64,6 +64,20 @@
       "when": 1779800000000,
       "tag": "0008_remove_shared_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782207875067,
+      "tag": "0009_nervous_shen",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782209444933,
+      "tag": "0010_pretty_patriot",
+      "breakpoints": true
     }
   ]
 }

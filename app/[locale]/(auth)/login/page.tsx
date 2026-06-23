@@ -21,22 +21,21 @@ function LoginForm() {
 
     
 
-    const { error } = await authClient.signIn.email(
-      { email, password },
-      {
-        onSuccess: () => {
-          router.push("/tableau-de-bord");
-        },
-        onError: (ctx) => {
-          setError(ctx.error.message);
-        },
-      }
-    );
+    const { data, error } = await authClient.signIn.email({ email, password });
 
     if (error) {
       setError(error.message ?? t("genericError"));
+      setLoading(false);
+      return;
     }
 
+    // Compte protégé par 2FA : le plugin twoFactorClient redirige déjà vers
+    // /login/2fa via onTwoFactorRedirect. On ne pousse pas vers le dashboard.
+    if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) {
+      return;
+    }
+
+    router.push("/tableau-de-bord");
     setLoading(false);
   }
 

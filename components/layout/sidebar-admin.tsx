@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, BarChart3, Gavel, Users, HelpCircle, BookOpen, Tag, Flag } from "lucide-react";
+import { Plus, BarChart3, Gavel, Users, HelpCircle, BookOpen, Tag, Flag, ScrollText } from "lucide-react";
 
 const adminNav = [
   { href: "/admin/statistiques", label: "Statistiques", icon: <BarChart3 className="w-5 h-5" /> },
@@ -11,6 +11,7 @@ const adminNav = [
   { href: "/admin/ressources", label: "Ressources", icon: <BookOpen className="w-5 h-5" /> },
   { href: "/admin/categories", label: "Catégories", icon: <Tag className="w-5 h-5" /> },
   { href: "/admin/utilisateurs", label: "Comptes utilisateurs", icon: <Users className="w-5 h-5" /> },
+  { href: "/admin/journal", label: "Journal des connexions", icon: <ScrollText className="w-5 h-5" /> },
 ];
 
 export function SidebarAdmin() {

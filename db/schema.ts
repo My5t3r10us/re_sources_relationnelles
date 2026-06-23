@@ -66,6 +66,7 @@ export const user = pgTable("user", {
   lastName: text("last_name"),
   role: userRoleEnum("role").notNull().default("citizen"),
   active: boolean("active").notNull().default(true),
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -99,6 +100,29 @@ export const account = pgTable("account", {
   password: text("password"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Double authentification (TOTP) — schéma requis par le plugin twoFactor de
+// better-auth. L'export DOIT s'appeler `twoFactor` pour être détecté par l'adapter.
+export const twoFactor = pgTable("two_factor", {
+  id: text("id").primaryKey(),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  verified: boolean("verified").notNull().default(true),
+});
+
+// Journal des connexions — append-only. Pas de FK vers `user` pour conserver
+// l'historique même après suppression d'un compte (exigence de journalisation).
+export const authLog = pgTable("auth_log", {
+  id: text("id").primaryKey(),
+  userId: text("user_id"),
+  event: text("event").notNull(), // "login"
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const verification = pgTable("verification", {
