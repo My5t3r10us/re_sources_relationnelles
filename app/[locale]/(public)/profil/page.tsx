@@ -3,6 +3,7 @@
 import { authClient } from "@/lib/auth-client";
 import { User, Mail, Shield, Calendar, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { TwoFactorSection } from "./two-factor-section";
 
 export default function ProfilPage() {
   const { data: session, isPending } = authClient.useSession();
@@ -93,6 +94,13 @@ export default function ProfilPage() {
             </div>
           </div>
         </div>
+
+        <TwoFactorSection
+          enabled={
+            (user as typeof user & { twoFactorEnabled?: boolean })
+              .twoFactorEnabled ?? false
+          }
+        />
       </div>
     </main>
   );
