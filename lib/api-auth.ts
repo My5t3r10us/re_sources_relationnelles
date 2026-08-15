@@ -1,29 +1,14 @@
-import { auth } from "@/lib/auth";
-import { db } from "@/db";
-import { user } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { apiError } from "@/lib/api-response";
+import { loadVerifiedUser, type UserRole, type VerifiedUser } from "@/lib/session-user";
+import { isAdminRole } from "@/lib/authz";
 
-export type ApiUser = {
-  id: string;
-  email: string;
-  name: string;
-  role: "citizen" | "moderator" | "admin" | "super_admin";
-  active: boolean;
-};
+export type { UserRole };
+
+/** Conservé pour compatibilité : identique à `VerifiedUser`. */
+export type ApiUser = VerifiedUser;
 
 export async function getApiSession(req: Request): Promise<ApiUser | null> {
-  const session = await auth.api.getSession({ headers: req.headers as never });
-  if (!session?.user) return null;
-
-  const [dbUser] = await db
-    .select({ id: user.id, email: user.email, name: user.name, role: user.role, active: user.active })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-
-  if (!dbUser || !dbUser.active) return null;
-  return dbUser as ApiUser;
+  return loadVerifiedUser(req.headers);
 }
 
 export async function requireApiAuth(req: Request): Promise<ApiUser> {
@@ -34,7 +19,7 @@ export async function requireApiAuth(req: Request): Promise<ApiUser> {
 
 export async function requireApiAdmin(req: Request): Promise<ApiUser> {
   const u = await requireApiAuth(req);
-  if (u.role !== "admin" && u.role !== "super_admin") {
+  if (!isAdminRole(u.role)) {
     throw apiError("FORBIDDEN", "Accès réservé aux administrateurs", 403);
   }
   return u;

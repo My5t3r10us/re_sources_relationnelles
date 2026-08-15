@@ -4,6 +4,7 @@ import {
   timestamp,
   boolean,
   integer,
+  bigint,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -123,6 +124,24 @@ export const authLog = pgTable("auth_log", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/**
+ * Compteurs de limitation de débit.
+ *
+ * Partagée entre better-auth (stockage `database`, qui écrit les clés de ses
+ * propres routes) et `lib/rate-limit.ts` (clés préfixées `api:`). Un stockage
+ * en base plutôt qu'en mémoire survit aux redémarrages et fonctionne en
+ * multi-instance.
+ *
+ * `lastRequest` est un horodatage epoch en millisecondes : `integer` (int4)
+ * déborderait, d'où le `bigint`.
+ */
+export const rateLimit = pgTable("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull().default(0),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull().default(0),
 });
 
 export const verification = pgTable("verification", {

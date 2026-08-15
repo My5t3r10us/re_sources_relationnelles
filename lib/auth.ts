@@ -33,6 +33,24 @@ export const auth = betterAuth({
     // Laissé désactivé en dev pour que le login fonctionne sur http://localhost.
     useSecureCookies: process.env.NODE_ENV === "production",
   },
+  rateLimit: {
+    // Activé hors développement (better-auth ne l'active de lui-même qu'en
+    // production). Stockage en base : les compteurs survivent aux redémarrages
+    // et sont partagés entre instances, contrairement au défaut en mémoire.
+    enabled: process.env.NODE_ENV !== "development",
+    storage: "database",
+    window: 60,
+    max: 100,
+    customRules: {
+      // Force brute sur les mots de passe.
+      "/sign-in/email": { window: 300, max: 10 },
+      "/sign-up/email": { window: 3600, max: 5 },
+      // Un code TOTP ne fait que 6 chiffres : sans plafond, l'espace 10^6 est
+      // parcourable. Idem pour les codes de secours.
+      "/two-factor/verify-totp": { window: 300, max: 5 },
+      "/two-factor/verify-backup-code": { window: 300, max: 5 },
+    },
+  },
   session: {
     // Durée de validité courte : la session expire après 24h.
     expiresIn: 60 * 60 * 24, // 1 jour
