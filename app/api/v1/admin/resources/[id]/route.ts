@@ -13,7 +13,7 @@ export async function DELETE(req: Request, { params }: Params) {
     const { id } = await params;
 
     const [existing] = await db
-      .select({ id: resource.id, imageUrl: resource.imageUrl })
+      .select({ id: resource.id, imageUrl: resource.imageUrl, authorId: resource.authorId })
       .from(resource)
       .where(eq(resource.id, id))
       .limit(1);
@@ -30,9 +30,10 @@ export async function DELETE(req: Request, { params }: Params) {
       ...(existing.imageUrl ? [existing.imageUrl] : []),
       ...files.map((f) => f.url),
     ];
+    // Propriétaire attendu : l'auteur de la ressource, pas l'administrateur.
     await Promise.allSettled(
       urlsToDelete.map((url) => {
-        const key = getObjectKeyFromUrl(url);
+        const key = getObjectKeyFromUrl(url, existing.authorId);
         return key ? deleteObject(key) : Promise.resolve();
       })
     );

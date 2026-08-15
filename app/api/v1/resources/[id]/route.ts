@@ -3,7 +3,8 @@ import { resource, category, user, resourceFile, favorite, completion, savedReso
 import { and, eq, or } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { getApiSession, requireApiAuth } from "@/lib/api-auth";
-import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
+import { assertOwnedObjectUrl, deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
+import { resourceInputSchema, firstIssueMessage } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -86,12 +87,13 @@ export async function PUT(req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const currentUser = await requireApiAuth(req);
-    const body = await req.json();
-    const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } = body;
 
-    if (!title?.trim() || !content?.trim()) {
-      return apiError("VALIDATION_ERROR", "Le titre et le contenu sont requis", 400);
+    const parsed = resourceInputSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return apiError("VALIDATION_ERROR", firstIssueMessage(parsed.error), 400);
     }
+    const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } =
+      parsed.data;
 
     const [existing] = await db
       .select({ authorId: resource.authorId })
@@ -101,6 +103,13 @@ export async function PUT(req: Request, { params }: Params) {
 
     if (!existing) return apiError("NOT_FOUND", "Ressource introuvable", 404);
     if (existing.authorId !== currentUser.id) return apiError("FORBIDDEN", "Non autorisé", 403);
+
+    try {
+      if (imageUrl) assertOwnedObjectUrl(imageUrl, currentUser.id);
+      for (const a of attachments ?? []) assertOwnedObjectUrl(a.url, currentUser.id);
+    } catch (err) {
+      return apiError("VALIDATION_ERROR", (err as Error).message, 400);
+    }
 
     const wordCount = content.trim().split(/\s+/).length;
     const readingTime = Math.max(1, Math.ceil(wordCount / 200));
@@ -119,8 +128,8 @@ export async function PUT(req: Request, { params }: Params) {
       title: title.trim(),
       content,
       summary: summary?.trim() || title.trim().substring(0, 160),
-      mediaType: (mediaType || "article") as never,
-      privacy: privacy || "public",
+      mediaType,
+      privacy,
       status: isDraft ? "draft" : "pending",
       categoryId: resolvedCategoryId,
       imageUrl: imageUrl || null,
@@ -178,9 +187,11 @@ export async function DELETE(req: Request, { params }: Params) {
       ...(existing.imageUrl ? [existing.imageUrl] : []),
       ...files.map((f) => f.url),
     ];
+    // La clé doit appartenir à l'AUTEUR de la ressource, même quand la
+    // suppression est faite par un administrateur.
     await Promise.allSettled(
       urlsToDelete.map((url) => {
-        const key = getObjectKeyFromUrl(url);
+        const key = getObjectKeyFromUrl(url, existing.authorId);
         return key ? deleteObject(key) : Promise.resolve();
       })
     );

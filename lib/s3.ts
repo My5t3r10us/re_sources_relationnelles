@@ -27,7 +27,24 @@ export function getPublicUrl(objectKey: string): string {
   return `${PUBLIC_URL_BASE}/${objectKey}`;
 }
 
-export function getObjectKeyFromUrl(url: string): string | null {
+/**
+ * Extrait la clé S3 d'une URL publique.
+ *
+ * `ownerId` est OBLIGATOIRE : la clé doit se trouver sous le préfixe de son
+ * propriétaire — c'est la convention posée à l'upload (`<userId>/<uuid>.<ext>`).
+ *
+ * Sans ce contrôle, `imageUrl` et `attachments[].url` étant fournis par le
+ * client, il suffisait de créer une ressource pointant sur l'objet d'autrui
+ * puis de la supprimer pour détruire le fichier de la victime — les clés des
+ * victimes étant publiquement lisibles sur chaque ressource du catalogue.
+ */
+export function getObjectKeyFromUrl(url: string, ownerId: string): string | null {
+  const key = extractRawKey(url);
+  if (key === null) return null;
+  return isKeyOwnedBy(key, ownerId) ? key : null;
+}
+
+function extractRawKey(url: string): string | null {
   const publicPrefix = `${PUBLIC_URL_BASE}/`;
   if (url.startsWith(publicPrefix)) return url.slice(publicPrefix.length);
 
@@ -36,6 +53,31 @@ export function getObjectKeyFromUrl(url: string): string | null {
   if (url.startsWith(legacyPrefix)) return url.slice(legacyPrefix.length);
 
   return null;
+}
+
+function isKeyOwnedBy(key: string, ownerId: string): boolean {
+  if (!ownerId) return false;
+  // Rejette la traversée et les clés relatives avant la comparaison de préfixe.
+  if (key.includes("..") || key.startsWith("/")) return false;
+  const [firstSegment, ...rest] = key.split("/");
+  return rest.length > 0 && firstSegment === ownerId;
+}
+
+/**
+ * Valide une URL fournie par le client avant de la stocker : elle doit
+ * désigner un objet du bucket appartenant à `ownerId`.
+ *
+ * Barrière posée à l'ÉCRITURE, complémentaire du contrôle à la suppression :
+ * une URL frauduleuse n'entre jamais en base.
+ */
+export function isOwnedObjectUrl(url: string, ownerId: string): boolean {
+  return getObjectKeyFromUrl(url, ownerId) !== null;
+}
+
+export function assertOwnedObjectUrl(url: string, ownerId: string): void {
+  if (!isOwnedObjectUrl(url, ownerId)) {
+    throw new Error("Fichier invalide : l'URL ne correspond pas à un envoi de cet utilisateur");
+  }
 }
 
 export async function uploadObject(

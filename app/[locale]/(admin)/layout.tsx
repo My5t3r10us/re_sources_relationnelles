@@ -3,25 +3,19 @@ import { redirect } from "next/navigation";
 import { SidebarAdmin } from "@/components/layout/sidebar-admin";
 import { ArrowLeft } from "lucide-react";
 import { getServerSession } from "@/lib/auth-server";
-import { db } from "@/db";
-import { user } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { isAdminRole } from "@/lib/authz";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // `getServerSession` relit déjà le rôle en base et rejette les comptes
+  // désactivés : plus besoin d'une seconde requête, et un administrateur
+  // désactivé n'atteint plus le panneau.
   const session = await getServerSession();
   if (!session?.user) redirect("/login?callbackUrl=/admin/statistiques");
-
-  const [dbUser] = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-
-  if (!dbUser || (dbUser.role !== "admin" && dbUser.role !== "super_admin")) redirect("/");
+  if (!isAdminRole(session.user.role)) redirect("/");
 
   return (
     <div className="flex h-screen overflow-hidden">

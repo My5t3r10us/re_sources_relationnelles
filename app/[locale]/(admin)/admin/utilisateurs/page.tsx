@@ -37,12 +37,9 @@ export default async function UtilisateursPage({ searchParams }: PageProps) {
   const search = params.q ?? "";
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
 
+  // Rôle déjà relu en base par getServerSession : pas de seconde requête.
   const session = await getServerSession();
-  let viewerRole = "admin";
-  if (session?.user) {
-    const [viewer] = await db.select({ role: user.role }).from(user).where(eq(user.id, session.user.id)).limit(1);
-    viewerRole = viewer?.role ?? "admin";
-  }
+  const viewerRole = session?.user.role ?? "admin";
 
   // Build conditions
   const conditions: SQL[] = [];
