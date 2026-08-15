@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Reply, Trash2, Send, Loader2 } from "lucide-react";
 import { addComment, deleteComment, likeComment } from "./comment-actions";
@@ -414,9 +415,9 @@ export function CommentSection({
       ) : (
         <div className="mb-8 text-center py-4 bg-surface-container-lowest rounded-xl">
           <p className="text-sm text-on-surface-variant">
-            <a href="/login" className="text-primary font-semibold hover:underline">
+            <Link href="/login" className="text-primary font-semibold hover:underline">
               Connectez-vous
-            </a>{" "}
+            </Link>{" "}
             pour participer à la discussion.
           </p>
         </div>

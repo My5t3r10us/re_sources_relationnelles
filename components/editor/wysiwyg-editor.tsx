@@ -10,6 +10,8 @@ interface WysiwygEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Nom accessible de la zone d'édition. */
+  ariaLabel?: string;
 }
 
 function ToolbarButton({
@@ -170,6 +172,7 @@ export function WysiwygEditor({
   value,
   onChange,
   placeholder = "Commencez à rédiger votre ressource...",
+  ariaLabel,
 }: WysiwygEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -193,6 +196,9 @@ export function WysiwygEditor({
       attributes: {
         class:
           "wysiwyg-content min-h-[280px] outline-none text-on-surface leading-relaxed",
+        // Le contenteditable de Tiptap n'a aucun nom accessible par défaut :
+        // sans cela, les lecteurs d'écran annoncent une zone d'édition anonyme.
+        "aria-label": ariaLabel ?? "Contenu",
       },
     },
     immediatelyRender: false,

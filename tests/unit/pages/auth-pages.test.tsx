@@ -53,10 +53,10 @@ describe("app/[locale]/(auth)/login/page.tsx", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith(
-        { email: "user@test.com", password: "password123" },
-        expect.any(Object)
-      );
+      expect(mockSignIn).toHaveBeenCalledWith({
+        email: "user@test.com",
+        password: "password123",
+      });
     });
   });
 

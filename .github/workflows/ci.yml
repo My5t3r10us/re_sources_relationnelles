@@ -1,0 +1,231 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+# Les runs de PR redondants sont annulés ; ceux de master ne le sont jamais,
+# pour ne pas couper un déploiement en vol.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: bun run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # `next typegen` génère next-env.d.ts et .next/types/**, tous deux
+      # gitignorés mais référencés par tsconfig.json.
+      - run: bun run typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    # Garde-fou : Dokploy refait son propre build, on ne publie donc pas .next.
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/placeholder
+      BETTER_AUTH_SECRET: build-only-secret-not-used-at-runtime-32ch
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # Détermine images.remotePatterns dans next.config.ts.
+      AWS_PUBLIC_URL: ${{ vars.AWS_PUBLIC_URL || 'https://resources.t3.tigrisfiles.io' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Clé unique par commit pour que le cache soit toujours réécrit, et
+      # restore-keys pour repartir du build précédent. On évite un hashFiles
+      # sur les sources : à ce stade node_modules est dans le workspace et
+      # serait parcouru lui aussi.
+      - name: Restaurer le cache de build Next
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
+            next-${{ runner.os }}-
+
+      - run: bun run build
+
+  test:
+    name: Tests unitaires & API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: resources_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # drizzle.config.ts lit DATABASE_URL_TEST ?? DATABASE_URL sous NODE_ENV=test,
+      # et tests/setup/vitest.setup.ts écrase DATABASE_URL par DATABASE_URL_TEST.
+      # Les deux doivent pointer sur la même base.
+      DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/resources_test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/resources_test
+      BETTER_AUTH_SECRET: test-secret-do-not-use-in-production-please-32chars
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Appliquer le schéma Drizzle
+        run: bun run db:test:push
+
+      - name: Lancer Vitest
+        run: bun run test:coverage
+
+      - name: Publier le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  e2e:
+    name: Tests E2E (Chromium)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: resources_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/resources_test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/resources_test
+      BETTER_AUTH_SECRET: test-secret-do-not-use-in-production-please-32chars
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      AWS_PUBLIC_URL: https://test.example.com
+      BASE_URL: http://localhost:3000
+      PORT: "3000"
+      # Comptes créés par tests/e2e/global.setup.ts.
+      E2E_ADMIN_EMAIL: admin-e2e@test.local
+      E2E_ADMIN_PASSWORD: Password123!
+      E2E_CITIZEN_EMAIL: citizen-e2e@test.local
+      E2E_CITIZEN_PASSWORD: Password123!
+      # Neutralise le bloc `webServer` de playwright.config.ts : le serveur est
+      # démarré par le workflow, à partir du build de production.
+      PLAYWRIGHT_NO_SERVER: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Appliquer le schéma Drizzle
+        run: bun run db:test:push
+
+      - name: Restaurer le cache des navigateurs Playwright
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
+      - name: Installer Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Construire l'application
+        run: bun run build
+
+      - name: Démarrer le serveur
+        run: |
+          bun run start &
+          echo $! > /tmp/next.pid
+          for i in $(seq 1 60); do
+            if curl -sSf -o /dev/null "$BASE_URL"; then
+              echo "Serveur prêt après ${i}s."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Le serveur Next n'a pas répondu sur $BASE_URL en 60s."
+          exit 1
+
+      # Le projet `chromium` déclare `dependencies: ["setup"]`, donc
+      # tests/e2e/global.setup.ts (seed des comptes) tourne automatiquement.
+      - name: Lancer Playwright
+        run: bunx playwright test --project=chromium
+
+      - name: Arrêter le serveur
+        if: always()
+        run: kill "$(cat /tmp/next.pid)" 2>/dev/null || true
+
+      - name: Publier le rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  deploy:
+    name: Déploiement Dokploy
+    needs: [lint, typecheck, build, test, e2e]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher le webhook Dokploy
+        env:
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
+            echo "::error::Le secret DOKPLOY_WEBHOOK_URL n'est pas configuré."
+            exit 1
+          fi
+          # -sS et le passage par `env:` évitent que l'URL (qui porte le
+          # refreshToken Dokploy) n'apparaisse dans les logs du run.
+          curl --fail-with-body -sS -X POST \
+               --retry 3 --retry-delay 5 --retry-all-errors \
+               --max-time 60 \
+               "$DOKPLOY_WEBHOOK_URL"
+
+      - name: Résumé
+        run: |
+          {
+            echo "### Déploiement déclenché"
+            echo
+            echo "- Commit : \`${GITHUB_SHA::7}\`"
+            echo "- Webhook Dokploy appelé avec succès."
+            echo
+            echo "> Le webhook Dokploy est *fire-and-forget* : une réponse 200 signifie"
+            echo "> « déploiement accepté », pas « déploiement réussi ». L'avancement et"
+            echo "> les logs de build sont à suivre dans l'interface Dokploy."
+          } >> "$GITHUB_STEP_SUMMARY"

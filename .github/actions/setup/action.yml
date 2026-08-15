@@ -1,0 +1,24 @@
+name: "Setup Bun & dependencies"
+description: "Installe Bun, restaure le cache de paquets et installe les dépendances du dépôt."
+
+runs:
+  using: composite
+  steps:
+    - name: Installer Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: "1.3.11"
+
+    - name: Restaurer le cache de paquets Bun
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun/install/cache
+        key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+        restore-keys: |
+          bun-${{ runner.os }}-
+
+    # `--frozen-lockfile` échoue si bun.lock diverge de package.json. Le dépôt a
+    # déjà connu des lockfiles désynchronisés : autant que la CI le refuse.
+    - name: Installer les dépendances
+      shell: bash
+      run: bun install --frozen-lockfile

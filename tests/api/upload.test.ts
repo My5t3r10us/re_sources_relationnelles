@@ -37,7 +37,10 @@ function buildReq(formData: FormData): NextRequest {
  */
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-function pngBytes(extra = 16): Uint8Array {
+// `Uint8Array<ArrayBuffer>` et non `Uint8Array` tout court : depuis TS 5.7 le
+// type est générique sur son buffer, et `BlobPart` (donc `new File([...])`)
+// exclut `ArrayBufferLike`, qui autoriserait un SharedArrayBuffer.
+function pngBytes(extra = 16): Uint8Array<ArrayBuffer> {
   return new Uint8Array([...PNG_MAGIC, ...new Uint8Array(extra)]);
 }
 
