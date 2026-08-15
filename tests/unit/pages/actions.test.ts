@@ -9,7 +9,31 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 // ─── Auth mocks ────────────────────────────────────────────────────────────
 const mockGetServerSession = vi.fn();
-vi.mock("@/lib/auth-server", () => ({ getServerSession: mockGetServerSession }));
+
+// Les gardes vivent désormais dans lib/auth-server (testées dans
+// tests/unit/lib/auth-server.test.ts) : on reproduit ici leur comportement à
+// partir de la session simulée, au lieu de la relecture de rôle que
+// actions.ts faisait lui-même.
+vi.mock("@/lib/auth-server", () => ({
+  getServerSession: mockGetServerSession,
+  requireUser: async () => {
+    const s = await mockGetServerSession();
+    if (!s?.user) throw new Error("Non authentifié");
+    return s.user;
+  },
+  requireAdmin: async () => {
+    const s = await mockGetServerSession();
+    if (!s?.user) throw new Error("Non authentifié");
+    if (s.user.role !== "admin" && s.user.role !== "super_admin") throw new Error("Accès refusé");
+    return s.user;
+  },
+  requireSuperAdmin: async () => {
+    const s = await mockGetServerSession();
+    if (!s?.user) throw new Error("Non authentifié");
+    if (s.user.role !== "super_admin") throw new Error("Accès réservé au super-administrateur");
+    return s.user;
+  },
+}));
 
 // ─── DB mock ───────────────────────────────────────────────────────────────
 let qIdx = 0;
@@ -28,6 +52,7 @@ vi.mock("@/db", () => ({
 vi.mock("@/lib/s3", () => ({
   deleteObject: vi.fn().mockResolvedValue(undefined),
   getObjectKeyFromUrl: vi.fn().mockReturnValue("some/key.jpg"),
+  assertOwnedObjectUrl: vi.fn(),
 }));
 
 // ─── Admin-user mock ───────────────────────────────────────────────────────
@@ -35,18 +60,22 @@ vi.mock("@/lib/admin-user", () => ({
   createAdminUserCore: vi.fn().mockResolvedValue({ id: "new-admin-id" }),
 }));
 
-const mockAdminSession = { user: { id: "admin1", name: "Admin" } };
-const mockUserSession = { user: { id: "u1", name: "User" } };
+const mockAdminSession = { user: { id: "admin1", name: "Admin", role: "admin" } };
+const mockSuperAdminSession = { user: { id: "sa1", name: "Super", role: "super_admin" } };
+const mockUserSession = { user: { id: "u1", name: "User", role: "citizen" } };
+
+// Cible générique d'une action de gestion de compte : distincte de l'acteur,
+// et non protégée.
+const targetRow = [{ id: "u1", role: "citizen", active: true }];
 
 function setupAdminAuth() {
-  // requireAdmin calls getServerSession then selects user role
   mockGetServerSession.mockResolvedValue(mockAdminSession);
-  qData = [[{ role: "admin" }]];
+  qData = [];
 }
 
 function setupSuperAdminAuth() {
-  mockGetServerSession.mockResolvedValue(mockAdminSession);
-  qData = [[{ role: "super_admin" }]];
+  mockGetServerSession.mockResolvedValue(mockSuperAdminSession);
+  qData = [];
 }
 
 beforeEach(() => {
@@ -68,7 +97,6 @@ describe("admin/actions.ts", () => {
 
     it("throws when not admin", async () => {
       mockGetServerSession.mockResolvedValue(mockUserSession);
-      qData = [[{ role: "citizen" }]];
       const { updateResourceStatus } = await import("@/app/[locale]/(admin)/admin/actions");
       await expect(updateResourceStatus("r1", "published")).rejects.toThrow("Accès refusé");
     });
@@ -89,6 +117,7 @@ describe("admin/actions.ts", () => {
 
     it("updates role for admin", async () => {
       setupAdminAuth();
+      qData = [targetRow];
       const { updateUserRole } = await import("@/app/[locale]/(admin)/admin/actions");
       await expect(updateUserRole("u1", "moderator")).resolves.toBeUndefined();
     });
@@ -97,14 +126,14 @@ describe("admin/actions.ts", () => {
   describe("toggleUserActive", () => {
     it("throws when user not found", async () => {
       setupAdminAuth();
-      qData = [[{ role: "admin" }], []]; // requireAdmin uses first, then user lookup returns []
+      qData = [[]]; // la cible est introuvable
       const { toggleUserActive } = await import("@/app/[locale]/(admin)/admin/actions");
       await expect(toggleUserActive("u1")).rejects.toThrow("Utilisateur introuvable");
     });
 
     it("toggles user active status", async () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession);
-      qData = [[{ role: "admin" }], [{ active: true }]];
+      qData = [targetRow];
       const { toggleUserActive } = await import("@/app/[locale]/(admin)/admin/actions");
       await expect(toggleUserActive("u1")).resolves.toBeUndefined();
     });
@@ -137,15 +166,15 @@ describe("admin/actions.ts", () => {
   describe("deleteResource", () => {
     it("deletes resource and cleans up S3 files", async () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession);
-      // requireAdmin: role, then resource imageUrl, then resource files
-      qData = [[{ role: "admin" }], [{ imageUrl: "https://cdn.example.com/img.jpg" }], [{ url: "https://cdn.example.com/file.pdf" }]];
+      // ressource (imageUrl + authorId), puis fichiers attachés
+      qData = [[{ imageUrl: "https://cdn.example.com/img.jpg", authorId: "u1" }], [{ url: "https://cdn.example.com/file.pdf" }]];
       const { deleteResource } = await import("@/app/[locale]/(admin)/admin/actions");
       await expect(deleteResource("r1")).resolves.toBeUndefined();
     });
 
     it("deletes resource without S3 files", async () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession);
-      qData = [[{ role: "admin" }], [{ imageUrl: null }], []];
+      qData = [[{ imageUrl: null, authorId: "u1" }], []];
       const { deleteResource } = await import("@/app/[locale]/(admin)/admin/actions");
       await expect(deleteResource("r1")).resolves.toBeUndefined();
     });
@@ -192,15 +221,14 @@ describe("admin/actions.ts", () => {
   describe("createAdminUser", () => {
     it("throws when not super_admin", async () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession);
-      qData = [[{ role: "admin" }]];
       const { createAdminUser } = await import("@/app/[locale]/(admin)/admin/actions");
-      await expect(createAdminUser({ name: "Alice", email: "alice@test.com", password: "pass", role: "admin" })).rejects.toThrow("super-administrateur");
+      await expect(createAdminUser({ name: "Alice", email: "alice@test.com", password: "MotDePasse123!", role: "admin" })).rejects.toThrow("super-administrateur");
     });
 
     it("creates admin user as super_admin", async () => {
       setupSuperAdminAuth();
       const { createAdminUser } = await import("@/app/[locale]/(admin)/admin/actions");
-      const result = await createAdminUser({ name: "Alice", email: "alice@test.com", password: "pass", role: "admin" });
+      const result = await createAdminUser({ name: "Alice", email: "alice@test.com", password: "MotDePasse123!", role: "admin" });
       expect(result).toHaveProperty("id");
     });
 
@@ -209,7 +237,7 @@ describe("admin/actions.ts", () => {
       const { createAdminUserCore } = await import("@/lib/admin-user");
       vi.mocked(createAdminUserCore).mockResolvedValueOnce({ error: { message: "Email already taken" } } as any);
       const { createAdminUser } = await import("@/app/[locale]/(admin)/admin/actions");
-      await expect(createAdminUser({ name: "Alice", email: "alice@test.com", password: "pass", role: "admin" })).rejects.toThrow("Email already taken");
+      await expect(createAdminUser({ name: "Alice", email: "alice@test.com", password: "MotDePasse123!", role: "admin" })).rejects.toThrow("Email already taken");
     });
   });
 
@@ -222,6 +250,7 @@ describe("admin/actions.ts", () => {
 
     it("updates user role as super_admin", async () => {
       setupSuperAdminAuth();
+      qData = [targetRow];
       const { updateUserRoleAsAdmin } = await import("@/app/[locale]/(admin)/admin/actions");
       await expect(updateUserRoleAsAdmin("u1", "admin")).resolves.toBeUndefined();
     });
@@ -392,6 +421,8 @@ describe("comment-actions.ts", () => {
 
     it("adds a comment", async () => {
       mockGetServerSession.mockResolvedValue(mockUserSession);
+      // La ressource cible est désormais chargée pour vérifier sa visibilité.
+      qData = [[{ authorId: "autre", status: "published", privacy: "public" }]];
       const { addComment } = await import("@/app/[locale]/(public)/ressource/[id]/comment-actions");
       const result = await addComment("r1", "Great resource!");
       expect(result).toEqual({ success: true });
@@ -399,9 +430,34 @@ describe("comment-actions.ts", () => {
 
     it("adds a reply comment with parentId", async () => {
       mockGetServerSession.mockResolvedValue(mockUserSession);
+      // Ressource visible, puis commentaire parent de la MÊME ressource.
+      qData = [
+        [{ authorId: "autre", status: "published", privacy: "public" }],
+        [{ resourceId: "r1" }],
+      ];
       const { addComment } = await import("@/app/[locale]/(public)/ressource/[id]/comment-actions");
       const result = await addComment("r1", "Reply!", "parent1");
       expect(result).toEqual({ success: true });
+    });
+
+    // Régression E-2 : on pouvait commenter une ressource privée d'autrui.
+    it("refuse de commenter une ressource privée d'autrui", async () => {
+      mockGetServerSession.mockResolvedValue(mockUserSession);
+      qData = [[{ authorId: "autre", status: "published", privacy: "private" }]];
+      const { addComment } = await import("@/app/[locale]/(public)/ressource/[id]/comment-actions");
+      await expect(addComment("r1", "Intrusion")).rejects.toThrow("Accès refusé");
+    });
+
+    it("refuse un parentId appartenant à une autre ressource", async () => {
+      mockGetServerSession.mockResolvedValue(mockUserSession);
+      qData = [
+        [{ authorId: "autre", status: "published", privacy: "public" }],
+        [{ resourceId: "une-autre-ressource" }],
+      ];
+      const { addComment } = await import("@/app/[locale]/(public)/ressource/[id]/comment-actions");
+      await expect(addComment("r1", "Réponse égarée", "parent1")).rejects.toThrow(
+        "Commentaire parent invalide"
+      );
     });
   });
 

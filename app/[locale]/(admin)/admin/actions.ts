@@ -14,6 +14,7 @@ import {
   commentStatusSchema,
   adminUserCreateSchema,
 } from "@/lib/validation";
+import { logAdminAction } from "@/lib/audit-log";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -48,7 +49,7 @@ export async function updateResourceStatus(
   resourceId: string,
   status: "published" | "rejected" | "flagged" | "pending" | "draft"
 ) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   // Le type de `status` ne contraint que la compilation : cette Server Action
   // est une route HTTP dont les arguments arrivent du réseau.
   const safeStatus = parseOrThrow(resourceStatusSchema, status);
@@ -56,6 +57,13 @@ export async function updateResourceStatus(
     .update(resource)
     .set({ status: safeStatus, updatedAt: new Date() })
     .where(eq(resource.id, resourceId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "resource.status_changed",
+    targetType: "resource",
+    targetId: resourceId,
+    metadata: { status: safeStatus },
+  });
   revalidatePath("/admin/moderation");
   revalidatePath("/admin/statistiques");
 }
@@ -77,16 +85,30 @@ export async function updateUserRole(
     .update(user)
     .set({ role, updatedAt: new Date() })
     .where(eq(user.id, userId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "user.role_changed",
+    targetType: "user",
+    targetId: userId,
+    metadata: { role },
+  });
   revalidatePath("/admin/utilisateurs");
 }
 
 export async function toggleUserActive(userId: string) {
-  const { target } = await requireManageableTarget(userId);
+  const { actor, target } = await requireManageableTarget(userId);
 
   await db
     .update(user)
     .set({ active: !target.active, updatedAt: new Date() })
     .where(eq(user.id, userId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "user.active_toggled",
+    targetType: "user",
+    targetId: userId,
+    metadata: { active: !target.active },
+  });
   revalidatePath("/admin/utilisateurs");
 }
 
@@ -96,29 +118,48 @@ export async function updateCommentStatus(
   commentId: string,
   status: "visible" | "hidden" | "flagged"
 ) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const safeStatus = parseOrThrow(commentStatusSchema, status);
   await db
     .update(comment)
     .set({ status: safeStatus, updatedAt: new Date() })
     .where(eq(comment.id, commentId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "comment.status_changed",
+    targetType: "comment",
+    targetId: commentId,
+    metadata: { status: safeStatus },
+  });
   revalidatePath("/admin/moderation");
 }
 
 export async function deleteComment(commentId: string) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   await db.delete(comment).where(eq(comment.id, commentId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "comment.deleted",
+    targetType: "comment",
+    targetId: commentId,
+  });
   revalidatePath("/admin/moderation");
 }
 
 // ─── Report actions ───
 
 export async function resolveReport(reportId: string) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   await db
     .update(report)
     .set({ resolved: true })
     .where(eq(report.id, reportId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "report.resolved",
+    targetType: "report",
+    targetId: reportId,
+  });
   revalidatePath("/admin/moderation");
   revalidatePath("/admin/signalements");
 }
@@ -126,7 +167,7 @@ export async function resolveReport(reportId: string) {
 // ─── Resource admin actions ───
 
 export async function deleteResource(resourceId: string) {
-  await requireAdmin();
+  const actor = await requireAdmin();
 
   const [existing] = await db
     .select({ imageUrl: resource.imageUrl, authorId: resource.authorId })
@@ -153,16 +194,30 @@ export async function deleteResource(resourceId: string) {
     })
   );
 
+  await logAdminAction({
+    actorId: actor.id,
+    event: "resource.deleted",
+    targetType: "resource",
+    targetId: resourceId,
+  });
+
   revalidatePath("/admin/ressources");
   revalidatePath("/catalogue");
 }
 
 export async function toggleFeaturedResource(resourceId: string, featured: boolean) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   await db
     .update(resource)
-    .set({ featured, updatedAt: new Date() })
+    .set({ featured: Boolean(featured), updatedAt: new Date() })
     .where(eq(resource.id, resourceId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "resource.featured_toggled",
+    targetType: "resource",
+    targetId: resourceId,
+    metadata: { featured: Boolean(featured) },
+  });
   revalidatePath("/admin/ressources");
   revalidatePath("/catalogue");
 }
@@ -175,14 +230,22 @@ export async function createCategory(data: {
   description?: string;
   icon?: string;
 }) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const safe = parseOrThrow(categoryInputSchema, data);
+  const categoryId = crypto.randomUUID();
   await db.insert(category).values({
-    id: crypto.randomUUID(),
+    id: categoryId,
     name: safe.name,
     slug: safe.slug,
     description: safe.description ?? null,
     icon: safe.icon ?? null,
+  });
+  await logAdminAction({
+    actorId: actor.id,
+    event: "category.created",
+    targetType: "category",
+    targetId: categoryId,
+    metadata: { slug: safe.slug },
   });
   revalidatePath("/admin/categories");
   revalidatePath("/catalogue");
@@ -193,7 +256,7 @@ export async function updateCategory(
   categoryId: string,
   data: { name: string; slug: string; description?: string; icon?: string }
 ) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   const safe = parseOrThrow(categoryInputSchema, data);
   await db
     .update(category)
@@ -204,13 +267,26 @@ export async function updateCategory(
       icon: safe.icon ?? null,
     })
     .where(eq(category.id, categoryId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "category.updated",
+    targetType: "category",
+    targetId: categoryId,
+    metadata: { slug: safe.slug },
+  });
   revalidatePath("/admin/categories");
   revalidatePath("/catalogue");
 }
 
 export async function deleteCategory(categoryId: string) {
-  await requireAdmin();
+  const actor = await requireAdmin();
   await db.delete(category).where(eq(category.id, categoryId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "category.deleted",
+    targetType: "category",
+    targetId: categoryId,
+  });
   revalidatePath("/admin/categories");
   revalidatePath("/catalogue");
 }
@@ -223,13 +299,20 @@ export async function createAdminUser(data: {
   password: string;
   role: "moderator" | "admin" | "super_admin";
 }) {
-  await requireSuperAdmin();
+  const actor = await requireSuperAdmin();
   const safeData = parseOrThrow(adminUserCreateSchema, data);
   const { createAdminUserCore } = await import("@/lib/admin-user");
   const result = await createAdminUserCore(safeData);
   if ("error" in result) {
     throw new Error(result.error.message);
   }
+  await logAdminAction({
+    actorId: actor.id,
+    event: "user.created",
+    targetType: "user",
+    targetId: result.id,
+    metadata: { role: safeData.role },
+  });
   revalidatePath("/admin/utilisateurs");
   return { id: result.id };
 }
@@ -258,6 +341,13 @@ export async function updateUserRoleAsAdmin(
     .update(user)
     .set({ role, updatedAt: new Date() })
     .where(eq(user.id, userId));
+  await logAdminAction({
+    actorId: actor.id,
+    event: "user.role_changed",
+    targetType: "user",
+    targetId: userId,
+    metadata: { role, by: "super_admin" },
+  });
   revalidatePath("/admin/utilisateurs");
 }
 

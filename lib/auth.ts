@@ -5,6 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { authLog } from "@/db/schema";
+import { MIN_PASSWORD_LENGTH } from "@/lib/validation";
 
 export const auth = betterAuth({
   plugins: [
@@ -18,15 +19,23 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  // Les origines de développement (localhost, émulateur Android) et le joker
+  // « exp://* » d'Expo Go ne sont acceptés qu'en dehors de la production, où
+  // seuls le domaine public et le schéma de l'application native restent
+  // autorisés.
   trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:8081",
-    "http://localhost:19000",
-    "http://localhost:19006",
-    "http://10.0.2.2:3000",
     "https://resource.baptistemoine.dev",
     "re-sources://",
-    "exp://*",
+    ...(process.env.NODE_ENV === "production"
+      ? []
+      : [
+          "http://localhost:3000",
+          "http://localhost:8081",
+          "http://localhost:19000",
+          "http://localhost:19006",
+          "http://10.0.2.2:3000",
+          "exp://*",
+        ]),
   ],
   advanced: {
     // Force le flag « Secure » sur les cookies en production (HTTPS uniquement).
@@ -81,6 +90,10 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    // Politique appliquée côté serveur, donc valable aussi pour l'inscription
+    // mobile et tout appel direct à l'API — l'attribut `minLength` du
+    // formulaire web ne contraint que le navigateur.
+    minPasswordLength: MIN_PASSWORD_LENGTH,
   },
   user: {
     additionalFields: {

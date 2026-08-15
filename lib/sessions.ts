@@ -4,10 +4,23 @@ import { and, eq, isNull } from "drizzle-orm";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // unambiguous chars
 
+/**
+ * Code de partage tiré d'un générateur cryptographique.
+ *
+ * `Math.random()` n'est pas sûr : son état interne se reconstruit à partir de
+ * quelques sorties observées, ce qui permettait de prédire les codes suivants
+ * et de rejoindre des sessions privées — un code suffit pour entrer et lire
+ * toute la messagerie.
+ *
+ * L'alphabet fait 32 caractères, soit une puissance de deux : le masquage sur
+ * 5 bits est donc uniforme, sans biais de modulo.
+ */
 export function generateShareCode(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
   let code = "";
-  for (let i = 0; i < 8; i++) {
-    code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+  for (let i = 0; i < bytes.length; i++) {
+    code += ALPHABET[bytes[i] & 31];
   }
   return code;
 }

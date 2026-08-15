@@ -3,12 +3,13 @@ import { resource } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { requireApiAdmin } from "@/lib/api-auth";
+import { logAdminAction } from "@/lib/audit-log";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PUT(req: Request, { params }: Params) {
   try {
-    await requireApiAdmin(req);
+    const actor = await requireApiAdmin(req);
     const { id } = await params;
     const body = await req.json();
     const { status } = body;
@@ -22,6 +23,13 @@ export async function PUT(req: Request, { params }: Params) {
     if (!existing) return apiError("NOT_FOUND", "Ressource introuvable", 404);
 
     await db.update(resource).set({ status, updatedAt: new Date() }).where(eq(resource.id, id));
+    await logAdminAction({
+      actorId: actor.id,
+      event: "resource.status_changed",
+      targetType: "resource",
+      targetId: id,
+      metadata: { status },
+    });
     return apiSuccess({ id, status });
   } catch (e) {
     if (e instanceof Response) return e;

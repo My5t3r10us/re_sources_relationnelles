@@ -16,24 +16,41 @@ import {
 import { auth } from "../lib/auth";
 import { randomUUID } from "crypto";
 
+/**
+ * Le seed crée des comptes à mot de passe connu et vide des tables : il ne
+ * doit jamais s'exécuter en production, où il ouvrirait des accès triviaux.
+ */
+if (process.env.NODE_ENV === "production") {
+  throw new Error(
+    "db/seed.ts est refusé en production : il crée des comptes de démonstration à mot de passe connu."
+  );
+}
+
+/**
+ * Mot de passe des comptes de démonstration. Surchargeable par
+ * SEED_PASSWORD ; la valeur par défaut respecte la politique serveur
+ * (12 caractères minimum).
+ */
+const SEED_PASSWORD = process.env.SEED_PASSWORD ?? "SeedPassword123!";
+
 const seedUsers = [
   {
     email: "admin@example.com",
-    password: "password123",
+    password: SEED_PASSWORD,
     name: "Admin User",
     firstName: "Admin",
     lastName: "User",
   },
   {
     email: "jean.dupont@example.com",
-    password: "password123",
+    password: SEED_PASSWORD,
     name: "Jean Dupont",
     firstName: "Jean",
     lastName: "Dupont",
   },
   {
     email: "marie.martin@example.com",
-    password: "password123",
+    password: SEED_PASSWORD,
     name: "Marie Martin",
     firstName: "Marie",
     lastName: "Martin",

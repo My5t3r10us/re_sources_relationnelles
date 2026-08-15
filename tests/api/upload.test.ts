@@ -12,6 +12,15 @@ vi.mock("@/lib/s3", () => ({
   getPublicUrl: (k: string) => `https://cdn.example.com/${k}`,
 }));
 
+// Ce fichier teste la route d'upload, pas la limitation de débit : sans ce
+// mock, tous les cas partagent l'identité « u1 » et épuisent le quota.
+// La limitation est couverte par tests/api/rate-limit.test.ts.
+vi.mock("@/lib/rate-limit", () => ({
+  RATE_LIMITS: { upload: { max: 20, windowSec: 3600 } },
+  requestIdentity: () => "user:u1",
+  checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }),
+}));
+
 import { POST } from "@/app/api/upload/route";
 import type { NextRequest } from "next/server";
 

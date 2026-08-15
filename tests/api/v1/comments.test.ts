@@ -120,4 +120,99 @@ describe("Comments API", () => {
       expect(b.body.data.liked).toBe(false);
     });
   });
+  // ─── Régression E-2 ──────────────────────────────────────────────────
+  // Ni la lecture ni l'écriture ne vérifiaient la ressource cible : les
+  // commentaires d'une ressource privée ou en brouillon étaient lisibles et
+  // commentables, et un `parentId` pouvait pointer vers une autre ressource.
+  describe("visibilité de la ressource cible", () => {
+    it("ne liste pas les commentaires d'une ressource privée pour un tiers", async () => {
+      const auteur = await createTestUser();
+      const tiers = await createTestUser();
+      const r = await createTestResource({ authorId: auteur.id, privacy: "private" });
+      await createTestComment({ resourceId: r.id, authorId: auteur.id, content: "Secret" });
+
+      const res = await harness
+        .req()
+        .get(`/api/v1/resources/${r.id}/comments`)
+        .set("Authorization", `Bearer ${tiers.token}`);
+      expect(res.status).toBe(403);
+    });
+
+    it("ne liste pas les commentaires d'un brouillon pour un tiers", async () => {
+      const auteur = await createTestUser();
+      const tiers = await createTestUser();
+      const r = await createTestResource({ authorId: auteur.id, status: "draft" });
+      await createTestComment({ resourceId: r.id, authorId: auteur.id, content: "Secret" });
+
+      const res = await harness
+        .req()
+        .get(`/api/v1/resources/${r.id}/comments`)
+        .set("Authorization", `Bearer ${tiers.token}`);
+      expect(res.status).toBe(404);
+    });
+
+    it("laisse l'auteur lire les commentaires de sa propre ressource privée", async () => {
+      const auteur = await createTestUser();
+      const r = await createTestResource({ authorId: auteur.id, privacy: "private" });
+      await createTestComment({ resourceId: r.id, authorId: auteur.id, content: "Note" });
+
+      const res = await harness
+        .req()
+        .get(`/api/v1/resources/${r.id}/comments`)
+        .set("Authorization", `Bearer ${auteur.token}`);
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBe(1);
+    });
+
+    it("empêche de commenter une ressource privée d'autrui", async () => {
+      const auteur = await createTestUser();
+      const tiers = await createTestUser();
+      const r = await createTestResource({ authorId: auteur.id, privacy: "private" });
+
+      const res = await harness
+        .req()
+        .post(`/api/v1/resources/${r.id}/comments`)
+        .set("Authorization", `Bearer ${tiers.token}`)
+        .send({ content: "Intrusion" });
+      expect(res.status).toBe(403);
+    });
+
+    it("empêche de commenter une ressource inexistante", async () => {
+      const u = await createTestUser();
+      const res = await harness
+        .req()
+        .post(`/api/v1/resources/${crypto.randomUUID()}/comments`)
+        .set("Authorization", `Bearer ${u.token}`)
+        .send({ content: "Fantôme" });
+      expect(res.status).toBe(404);
+    });
+
+    it("refuse un parentId appartenant à une autre ressource", async () => {
+      const u = await createTestUser();
+      const r1 = await createTestResource({ authorId: u.id });
+      const r2 = await createTestResource({ authorId: u.id });
+      const parent = await createTestComment({ resourceId: r1.id, authorId: u.id });
+
+      const res = await harness
+        .req()
+        .post(`/api/v1/resources/${r2.id}/comments`)
+        .set("Authorization", `Bearer ${u.token}`)
+        .send({ content: "Réponse égarée", parentId: parent.id });
+      expect(res.status).toBe(400);
+    });
+
+    it("accepte un parentId de la même ressource", async () => {
+      const u = await createTestUser();
+      const r = await createTestResource({ authorId: u.id });
+      const parent = await createTestComment({ resourceId: r.id, authorId: u.id });
+
+      const res = await harness
+        .req()
+        .post(`/api/v1/resources/${r.id}/comments`)
+        .set("Authorization", `Bearer ${u.token}`)
+        .send({ content: "Réponse", parentId: parent.id });
+      expect(res.status).toBe(201);
+      expect(res.body.data.parentId).toBe(parent.id);
+    });
+  });
 });

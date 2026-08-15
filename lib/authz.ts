@@ -4,6 +4,21 @@ import type { UserRole } from "@/lib/session-user";
 export const ROLES = userRoleEnum.enumValues;
 
 /**
+ * ⚠️ Le rôle `moderator` n'accorde aujourd'hui AUCUN droit.
+ *
+ * Il existe dans l'enum et s'attribue depuis le panneau, mais `isAdminRole`
+ * ne le reconnaît pas : un modérateur n'a accès à aucun outil de modération.
+ * Un rôle qui semble accorder des droits sans en accorder est une source
+ * d'erreur d'exploitation — on peut croire un compte habilité alors qu'il ne
+ * l'est pas.
+ *
+ * Trancher est un choix produit, pas un correctif : soit lui ouvrir la
+ * modération des contenus et des signalements (sans la gestion de comptes),
+ * soit le retirer de l'enum. En attendant, l'écart est explicite ici.
+ */
+export const MODERATOR_HAS_NO_PRIVILEGES = true;
+
+/**
  * Rôles qu'un acteur peut attribuer, selon son propre rôle.
  *
  * Ces listes sont vérifiées À L'EXÉCUTION. Les signatures TypeScript des

@@ -132,7 +132,7 @@ export default function RegisterPage() {
               id="password"
               type="password"
               required
-              minLength={8}
+              minLength={12}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="block w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest focus:outline-none"
@@ -151,7 +151,7 @@ export default function RegisterPage() {
               id="confirmPassword"
               type="password"
               required
-              minLength={8}
+              minLength={12}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="block w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest focus:outline-none"

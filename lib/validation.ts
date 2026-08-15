@@ -40,9 +40,11 @@ const httpUrl = z
  * L'attribut `minLength` du formulaire d'inscription ne contraint que le
  * navigateur ; il est trivialement contournable.
  */
+export const MIN_PASSWORD_LENGTH = 12;
+
 export const passwordSchema = z
   .string()
-  .min(12, "Le mot de passe doit faire au moins 12 caractères")
+  .min(MIN_PASSWORD_LENGTH, `Le mot de passe doit faire au moins ${MIN_PASSWORD_LENGTH} caractères`)
   .max(256);
 
 export const attachmentSchema = z.object({

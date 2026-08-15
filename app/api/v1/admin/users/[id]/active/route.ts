@@ -3,6 +3,7 @@ import { user } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { requireApiAdmin } from "@/lib/api-auth";
+import { logAdminAction } from "@/lib/audit-log";
 import { canManageUser, manageDenialMessage } from "@/lib/authz";
 import type { UserRole } from "@/lib/session-user";
 
@@ -28,6 +29,13 @@ export async function PUT(req: Request, { params }: Params) {
     }
 
     await db.update(user).set({ active: !target.active, updatedAt: new Date() }).where(eq(user.id, id));
+    await logAdminAction({
+      actorId: actor.id,
+      event: "user.active_toggled",
+      targetType: "user",
+      targetId: id,
+      metadata: { active: !target.active },
+    });
     return apiSuccess({ id, active: !target.active });
   } catch (e) {
     if (e instanceof Response) return e;

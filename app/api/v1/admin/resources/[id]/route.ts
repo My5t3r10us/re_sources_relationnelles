@@ -3,13 +3,14 @@ import { resource, resourceFile } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { requireApiAdmin } from "@/lib/api-auth";
+import { logAdminAction } from "@/lib/audit-log";
 import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function DELETE(req: Request, { params }: Params) {
   try {
-    await requireApiAdmin(req);
+    const actor = await requireApiAdmin(req);
     const { id } = await params;
 
     const [existing] = await db
@@ -37,6 +38,13 @@ export async function DELETE(req: Request, { params }: Params) {
         return key ? deleteObject(key) : Promise.resolve();
       })
     );
+
+    await logAdminAction({
+      actorId: actor.id,
+      event: "resource.deleted",
+      targetType: "resource",
+      targetId: id,
+    });
 
     return apiSuccess({ deleted: true });
   } catch (e) {

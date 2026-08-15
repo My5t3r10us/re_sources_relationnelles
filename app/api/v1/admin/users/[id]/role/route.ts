@@ -3,6 +3,7 @@ import { user } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { requireApiAdmin } from "@/lib/api-auth";
+import { logAdminAction } from "@/lib/audit-log";
 import { canAssignRole, canManageUser, manageDenialMessage } from "@/lib/authz";
 import { roleSchema } from "@/lib/validation";
 import type { UserRole } from "@/lib/session-user";
@@ -49,6 +50,13 @@ export async function PUT(req: Request, { params }: Params) {
       .update(user)
       .set({ role: parsedRole.data, updatedAt: new Date() })
       .where(eq(user.id, id));
+    await logAdminAction({
+      actorId: actor.id,
+      event: "user.role_changed",
+      targetType: "user",
+      targetId: id,
+      metadata: { role: parsedRole.data },
+    });
     return apiSuccess({ id, role: parsedRole.data });
   } catch (e) {
     if (e instanceof Response) return e;

@@ -34,10 +34,10 @@ describe("s3", () => {
   });
 
   describe("getObjectKeyFromUrl", () => {
-    it("strips public prefix when url matches", async () => {
+    it("strips public prefix when the key belongs to the owner", async () => {
       process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
       const { getObjectKeyFromUrl } = await import("@/lib/s3");
-      expect(getObjectKeyFromUrl("https://cdn.example.com/path/to/file.png")).toBe("path/to/file.png");
+      expect(getObjectKeyFromUrl("https://cdn.example.com/u1/file.png", "u1")).toBe("u1/file.png");
     });
 
     it("strips legacy endpoint+bucket prefix", async () => {
@@ -45,12 +45,68 @@ describe("s3", () => {
       process.env.AWS_BUCKET = "buck";
       process.env.AWS_ENDPOINT_URL_S3 = "https://s3.example.com";
       const { getObjectKeyFromUrl } = await import("@/lib/s3");
-      expect(getObjectKeyFromUrl("https://s3.example.com/buck/key.png")).toBe("key.png");
+      expect(getObjectKeyFromUrl("https://s3.example.com/buck/u1/key.png", "u1")).toBe("u1/key.png");
     });
 
     it("returns null for unrelated url", async () => {
       const { getObjectKeyFromUrl } = await import("@/lib/s3");
-      expect(getObjectKeyFromUrl("https://other.example.com/foo.png")).toBeNull();
+      expect(getObjectKeyFromUrl("https://other.example.com/foo.png", "u1")).toBeNull();
+    });
+
+    // ── Régression C-4 ────────────────────────────────────────────────
+    // `imageUrl` et `attachments[].url` sont fournis par le client, et les
+    // clés des victimes sont publiquement lisibles sur chaque ressource du
+    // catalogue : il suffisait de créer une ressource pointant sur le fichier
+    // d'autrui puis de la supprimer pour le détruire.
+    it("refuses a key belonging to another user", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { getObjectKeyFromUrl } = await import("@/lib/s3");
+      expect(getObjectKeyFromUrl("https://cdn.example.com/victime/photo.png", "attaquant")).toBeNull();
+    });
+
+    it("refuses a key at the bucket root (no owner prefix)", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { getObjectKeyFromUrl } = await import("@/lib/s3");
+      expect(getObjectKeyFromUrl("https://cdn.example.com/racine.png", "u1")).toBeNull();
+    });
+
+    it("refuses path traversal in the key", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { getObjectKeyFromUrl } = await import("@/lib/s3");
+      expect(getObjectKeyFromUrl("https://cdn.example.com/u1/../victime/p.png", "u1")).toBeNull();
+    });
+
+    it("refuses an owner prefix that is merely a string prefix of another", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { getObjectKeyFromUrl } = await import("@/lib/s3");
+      // « u1 » ne doit pas ouvrir l'accès aux objets de « u12 ».
+      expect(getObjectKeyFromUrl("https://cdn.example.com/u12/p.png", "u1")).toBeNull();
+    });
+
+    it("refuses an empty owner", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { getObjectKeyFromUrl } = await import("@/lib/s3");
+      expect(getObjectKeyFromUrl("https://cdn.example.com/u1/p.png", "")).toBeNull();
+    });
+  });
+
+  describe("assertOwnedObjectUrl", () => {
+    it("accepts an object uploaded by the same user", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { assertOwnedObjectUrl } = await import("@/lib/s3");
+      expect(() => assertOwnedObjectUrl("https://cdn.example.com/u1/a.png", "u1")).not.toThrow();
+    });
+
+    it("rejects an object belonging to someone else", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { assertOwnedObjectUrl } = await import("@/lib/s3");
+      expect(() => assertOwnedObjectUrl("https://cdn.example.com/u2/a.png", "u1")).toThrow();
+    });
+
+    it("rejects an URL pointing outside the bucket", async () => {
+      process.env.AWS_PUBLIC_URL = "https://cdn.example.com";
+      const { assertOwnedObjectUrl } = await import("@/lib/s3");
+      expect(() => assertOwnedObjectUrl("https://evil.example.com/u1/a.png", "u1")).toThrow();
     });
   });
 

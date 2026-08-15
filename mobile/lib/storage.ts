@@ -1,5 +1,19 @@
 import { Platform } from 'react-native';
 
+/**
+ * ⚠️ Repli web : le jeton est écrit en `localStorage`, accessible à tout
+ * script de la page. Sur la cible Expo web, une XSS permettrait donc de
+ * l'exfiltrer. Sur iOS et Android, `expo-secure-store` est utilisé et ce
+ * problème ne se pose pas.
+ *
+ * Correction attendue : sur web, s'appuyer sur le cookie de session
+ * `httpOnly` posé par better-auth (fetch avec `credentials: "include"`) au
+ * lieu de conserver un jeton porteur côté client. Ce changement touche le
+ * flux d'authentification mobile et n'a pas pu être validé faute de runtime
+ * Expo dans l'environnement de correction — il est laissé en l'état plutôt
+ * que livré non testé.
+ */
+
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
 

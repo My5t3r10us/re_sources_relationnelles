@@ -74,7 +74,7 @@ vi.mock("@/app/[locale]/(admin)/admin/statistiques/stats-export", () => ({
   StatsExportButton: () => <button>Export</button>,
 }));
 
-const mockAdminSession = { user: { id: "admin1", name: "Admin User" } };
+const mockAdminSession = { user: { id: "admin1", name: "Admin User", role: "admin" } };
 
 beforeEach(() => {
   qIdx = 0;
@@ -229,8 +229,8 @@ describe("app/[locale]/(admin)/admin/statistiques/page.tsx", () => {
 describe("app/[locale]/(admin)/admin/utilisateurs/page.tsx", () => {
   it("renders with empty users list", async () => {
     mockGetServerSession.mockResolvedValue(mockAdminSession);
-    // viewer role lookup, users list, total count
-    qData = [[{ role: "admin" }], [], [{ total: 0 }]];
+    // liste des utilisateurs, puis total (le rôle du visiteur vient de la session)
+    qData = [[], [{ total: 0 }]];
     vi.resetModules();
     const { default: Page } = await import("@/app/[locale]/(admin)/admin/utilisateurs/page");
     const result = await Page({ searchParams: Promise.resolve({}) });
@@ -240,8 +240,8 @@ describe("app/[locale]/(admin)/admin/utilisateurs/page.tsx", () => {
   it("renders with users", async () => {
     mockGetServerSession.mockResolvedValue(mockAdminSession);
     const u = { id: "u1", name: "Alice", email: "alice@test.com", role: "citizen", active: true, createdAt: new Date() };
-    // viewer role lookup, users list, total count
-    qData = [[{ role: "admin" }], [u], [{ total: 1 }]];
+    // liste des utilisateurs, puis total
+    qData = [[u], [{ total: 1 }]];
     vi.resetModules();
     const { default: Page } = await import("@/app/[locale]/(admin)/admin/utilisateurs/page");
     const result = await Page({ searchParams: Promise.resolve({}) });
@@ -250,7 +250,7 @@ describe("app/[locale]/(admin)/admin/utilisateurs/page.tsx", () => {
 
   it("renders with role and search filter", async () => {
     mockGetServerSession.mockResolvedValue(mockAdminSession);
-    qData = [[{ role: "admin" }], [], [{ total: 0 }]];
+    qData = [[], [{ total: 0 }]];
     vi.resetModules();
     const { default: Page } = await import("@/app/[locale]/(admin)/admin/utilisateurs/page");
     const result = await Page({ searchParams: Promise.resolve({ role: "admin", q: "alice" }) });
