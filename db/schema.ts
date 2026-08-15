@@ -6,6 +6,7 @@ import {
   integer,
   bigint,
   pgEnum,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -125,17 +126,24 @@ export const twoFactor = pgTable("two_factor", {
  * désactivation, suppression) ne laissait aucune piste d'audit. Les trois
  * colonnes `target*` décrivent l'objet de l'action.
  */
-export const authLog = pgTable("auth_log", {
-  id: text("id").primaryKey(),
-  userId: text("user_id"),
-  event: text("event").notNull(), // "login", "user.role_changed", "resource.deleted"…
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  targetType: text("target_type"), // "user" | "resource" | "comment" | "report" | "category"
-  targetId: text("target_id"),
-  metadata: text("metadata"), // JSON sérialisé (ancien/nouveau rôle, statut…)
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const authLog = pgTable(
+  "auth_log",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id"),
+    event: text("event").notNull(), // "login", "user.role_changed", "resource.deleted"…
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    targetType: text("target_type"), // "user" | "resource" | "comment" | "report" | "category"
+    targetId: text("target_id"),
+    metadata: text("metadata"), // JSON sérialisé (ancien/nouveau rôle, statut…)
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  // La purge de rétention (lib/rgpd.ts) balaie la table par `created_at`, et la
+  // page d'administration la trie par ce même champ : sans index, les deux font
+  // un seq scan qui grossit avec le journal.
+  (table) => [index("auth_log_created_at_idx").on(table.createdAt)],
+);
 
 /**
  * Compteurs de limitation de débit.
