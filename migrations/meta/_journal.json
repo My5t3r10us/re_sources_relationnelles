@@ -78,6 +78,20 @@
       "when": 1782209444933,
       "tag": "0010_pretty_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786787052168,
+      "tag": "0011_classy_randall",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786788179968,
+      "tag": "0012_first_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }

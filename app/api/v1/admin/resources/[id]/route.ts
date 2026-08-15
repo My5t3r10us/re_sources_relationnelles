@@ -3,17 +3,18 @@ import { resource, resourceFile } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { requireApiAdmin } from "@/lib/api-auth";
+import { logAdminAction } from "@/lib/audit-log";
 import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function DELETE(req: Request, { params }: Params) {
   try {
-    await requireApiAdmin(req);
+    const actor = await requireApiAdmin(req);
     const { id } = await params;
 
     const [existing] = await db
-      .select({ id: resource.id, imageUrl: resource.imageUrl })
+      .select({ id: resource.id, imageUrl: resource.imageUrl, authorId: resource.authorId })
       .from(resource)
       .where(eq(resource.id, id))
       .limit(1);
@@ -30,12 +31,20 @@ export async function DELETE(req: Request, { params }: Params) {
       ...(existing.imageUrl ? [existing.imageUrl] : []),
       ...files.map((f) => f.url),
     ];
+    // Propriétaire attendu : l'auteur de la ressource, pas l'administrateur.
     await Promise.allSettled(
       urlsToDelete.map((url) => {
-        const key = getObjectKeyFromUrl(url);
+        const key = getObjectKeyFromUrl(url, existing.authorId);
         return key ? deleteObject(key) : Promise.resolve();
       })
     );
+
+    await logAdminAction({
+      actorId: actor.id,
+      event: "resource.deleted",
+      targetType: "resource",
+      targetId: id,
+    });
 
     return apiSuccess({ deleted: true });
   } catch (e) {

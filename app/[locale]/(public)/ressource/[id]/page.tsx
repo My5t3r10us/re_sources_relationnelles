@@ -17,8 +17,9 @@ import {
 import Link from "next/link";
 import { db } from "@/db";
 import { resource, user, category, comment, commentLike, favorite, completion, savedResource } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-server";
+import { canViewResource } from "@/lib/resource-access";
 import { CommentSection } from "./comment-section";
 import { FavoriteButton, ReadButton, SaveButton, ShareButton } from "./resource-client";
 import { ReportButton } from "@/components/ui/report-button";
@@ -80,16 +81,22 @@ export default async function RessourcePage({ params }: PageProps) {
 
   const session = await getServerSession();
 
-  // Enforce privacy access control
-  if (res.privacy === "private" && session?.user?.id !== res.authorId) {
+  // Contrôle d'accès : statut ET confidentialité. La page ne vérifiait
+  // auparavant que `privacy`, laissant lire par URL directe les ressources en
+  // brouillon, en attente, rejetées ou signalées.
+  if (!canViewResource(res, session?.user)) {
     notFound();
   }
 
-  // Increment view count
-  db.update(resource)
-    .set({ viewCount: res.viewCount + 1 })
-    .where(eq(resource.id, id))
-    .then(() => {});
+  // Incrément atomique, et seulement sur une ressource publiée : la lecture
+  // seule ne doit pas gonfler le compteur d'un brouillon, et deux vues
+  // simultanées ne doivent pas s'écraser l'une l'autre.
+  if (res.status === "published") {
+    db.update(resource)
+      .set({ viewCount: sql`${resource.viewCount} + 1` })
+      .where(eq(resource.id, id))
+      .then(() => {});
+  }
 
   const comments = await db
     .select({

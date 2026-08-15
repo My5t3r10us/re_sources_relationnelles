@@ -118,4 +118,98 @@ describe("Admin users", () => {
       expect(res.status).toBe(400);
     });
   });
+
+  // ─── Régressions C-1 et C-2 ──────────────────────────────────────────
+  // C-1 : le rôle n'était contraint que par un type TypeScript, si bien
+  // qu'un administrateur pouvait s'attribuer `super_admin`.
+  // C-2 : aucun chemin ne vérifiait le rôle de la CIBLE, si bien qu'un
+  // administrateur pouvait rétrograder puis désactiver le super-administrateur.
+  describe("protection des comptes privilégiés", () => {
+    it("empêche un admin de se promouvoir lui-même", async () => {
+      const admin = await createTestUser({ role: "admin" });
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${admin.id}/role`)
+        .set("Authorization", `Bearer ${admin.token}`)
+        .send({ role: "super_admin" });
+      expect(res.status).toBe(403);
+    });
+
+    it("empêche un admin de changer son propre rôle, même vers un rôle inférieur", async () => {
+      const admin = await createTestUser({ role: "admin" });
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${admin.id}/role`)
+        .set("Authorization", `Bearer ${admin.token}`)
+        .send({ role: "citizen" });
+      expect(res.status).toBe(403);
+    });
+
+    it("empêche un admin de rétrograder un super_admin", async () => {
+      const admin = await createTestUser({ role: "admin" });
+      const sa = await createTestUser({ role: "super_admin" });
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${sa.id}/role`)
+        .set("Authorization", `Bearer ${admin.token}`)
+        .send({ role: "citizen" });
+      expect(res.status).toBe(403);
+    });
+
+    it("empêche un admin de désactiver un super_admin", async () => {
+      const admin = await createTestUser({ role: "admin" });
+      const sa = await createTestUser({ role: "super_admin" });
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${sa.id}/active`)
+        .set("Authorization", `Bearer ${admin.token}`)
+        .send();
+      expect(res.status).toBe(403);
+    });
+
+    it("empêche un admin de se désactiver lui-même", async () => {
+      const admin = await createTestUser({ role: "admin" });
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${admin.id}/active`)
+        .set("Authorization", `Bearer ${admin.token}`)
+        .send();
+      expect(res.status).toBe(403);
+    });
+
+    it("autorise un super_admin à rétrograder un autre super_admin", async () => {
+      const sa = await createTestUser({ role: "super_admin" });
+      const autre = await createTestUser({ role: "super_admin" });
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${autre.id}/role`)
+        .set("Authorization", `Bearer ${sa.token}`)
+        .send({ role: "citizen" });
+      expect(res.status).toBe(200);
+      expect(res.body.data.role).toBe("citizen");
+    });
+
+    it("autorise un super_admin à promouvoir un citoyen en super_admin", async () => {
+      const sa = await createTestUser({ role: "super_admin" });
+      const target = await createTestUser();
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${target.id}/role`)
+        .set("Authorization", `Bearer ${sa.token}`)
+        .send({ role: "super_admin" });
+      expect(res.status).toBe(200);
+    });
+
+    // Régression C-3 côté API : un compte désactivé ne doit plus rien pouvoir.
+    it("rejette un administrateur désactivé", async () => {
+      const admin = await createTestUser({ role: "admin", active: false });
+      const target = await createTestUser();
+      const res = await harness
+        .req()
+        .put(`/api/v1/admin/users/${target.id}/role`)
+        .set("Authorization", `Bearer ${admin.token}`)
+        .send({ role: "moderator" });
+      expect(res.status).toBe(401);
+    });
+  });
 });

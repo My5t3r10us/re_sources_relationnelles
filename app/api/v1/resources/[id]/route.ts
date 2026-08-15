@@ -1,9 +1,11 @@
 import { db } from "@/db";
 import { resource, category, user, resourceFile, favorite, completion, savedResource } from "@/db/schema";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { getApiSession, requireApiAuth } from "@/lib/api-auth";
-import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
+import { assertOwnedObjectUrl, deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
+import { resourceInputSchema, firstIssueMessage } from "@/lib/validation";
+import { resourceViewDenial } from "@/lib/resource-access";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,15 +43,9 @@ export async function GET(req: Request, { params }: Params) {
 
   if (!row) return apiError("NOT_FOUND", "Ressource introuvable", 404);
 
-  const isAdmin = session?.role === "admin" || session?.role === "super_admin";
-  const isAuthor = session?.id === row.authorId;
-
-  if (row.status !== "published" && !isAdmin && !isAuthor) {
-    return apiError("NOT_FOUND", "Ressource introuvable", 404);
-  }
-  if (row.privacy === "private" && !isAuthor && !isAdmin) {
-    return apiError("FORBIDDEN", "Accès refusé", 403);
-  }
+  const denial = resourceViewDenial(row, session);
+  if (denial === "not_found") return apiError("NOT_FOUND", "Ressource introuvable", 404);
+  if (denial === "forbidden") return apiError("FORBIDDEN", "Accès refusé", 403);
 
   const files = await db
     .select({ id: resourceFile.id, url: resourceFile.url, name: resourceFile.name, contentType: resourceFile.contentType })
@@ -77,7 +73,14 @@ export async function GET(req: Request, { params }: Params) {
     isSaved = !!saved;
   }
 
-  await db.update(resource).set({ viewCount: (row.viewCount ?? 0) + 1 }).where(eq(resource.id, id));
+  // Incrément atomique : la variante lecture-modification-écriture perdait les
+  // vues concurrentes. Réservé aux ressources publiées.
+  if (row.status === "published") {
+    await db
+      .update(resource)
+      .set({ viewCount: sql`${resource.viewCount} + 1` })
+      .where(eq(resource.id, id));
+  }
 
   return apiSuccess({ ...row, files, isFavorite, isRead, isSaved });
 }
@@ -86,12 +89,13 @@ export async function PUT(req: Request, { params }: Params) {
   try {
     const { id } = await params;
     const currentUser = await requireApiAuth(req);
-    const body = await req.json();
-    const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } = body;
 
-    if (!title?.trim() || !content?.trim()) {
-      return apiError("VALIDATION_ERROR", "Le titre et le contenu sont requis", 400);
+    const parsed = resourceInputSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return apiError("VALIDATION_ERROR", firstIssueMessage(parsed.error), 400);
     }
+    const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } =
+      parsed.data;
 
     const [existing] = await db
       .select({ authorId: resource.authorId })
@@ -101,6 +105,13 @@ export async function PUT(req: Request, { params }: Params) {
 
     if (!existing) return apiError("NOT_FOUND", "Ressource introuvable", 404);
     if (existing.authorId !== currentUser.id) return apiError("FORBIDDEN", "Non autorisé", 403);
+
+    try {
+      if (imageUrl) assertOwnedObjectUrl(imageUrl, currentUser.id);
+      for (const a of attachments ?? []) assertOwnedObjectUrl(a.url, currentUser.id);
+    } catch (err) {
+      return apiError("VALIDATION_ERROR", (err as Error).message, 400);
+    }
 
     const wordCount = content.trim().split(/\s+/).length;
     const readingTime = Math.max(1, Math.ceil(wordCount / 200));
@@ -119,8 +130,8 @@ export async function PUT(req: Request, { params }: Params) {
       title: title.trim(),
       content,
       summary: summary?.trim() || title.trim().substring(0, 160),
-      mediaType: (mediaType || "article") as never,
-      privacy: privacy || "public",
+      mediaType,
+      privacy,
       status: isDraft ? "draft" : "pending",
       categoryId: resolvedCategoryId,
       imageUrl: imageUrl || null,
@@ -178,9 +189,11 @@ export async function DELETE(req: Request, { params }: Params) {
       ...(existing.imageUrl ? [existing.imageUrl] : []),
       ...files.map((f) => f.url),
     ];
+    // La clé doit appartenir à l'AUTEUR de la ressource, même quand la
+    // suppression est faite par un administrateur.
     await Promise.allSettled(
       urlsToDelete.map((url) => {
-        const key = getObjectKeyFromUrl(url);
+        const key = getObjectKeyFromUrl(url, existing.authorId);
         return key ? deleteObject(key) : Promise.resolve();
       })
     );

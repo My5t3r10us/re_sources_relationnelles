@@ -1,31 +1,55 @@
 "use server";
 
 import { db } from "@/db";
-import { comment, commentLike } from "@/db/schema";
+import { comment, commentLike, resource } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { getServerSession } from "@/lib/auth-server";
+import { requireUser } from "@/lib/auth-server";
+import { canViewResource } from "@/lib/resource-access";
+import { commentInputSchema, parseOrThrow } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 
-async function requireAuth() {
-  const session = await getServerSession();
-  if (!session?.user) throw new Error("Non authentifié");
-  return session.user;
-}
+const requireAuth = requireUser;
 
 export async function addComment(resourceId: string, content: string, parentId?: string) {
   const user = await requireAuth();
 
-  if (!content?.trim()) throw new Error("Le commentaire ne peut pas être vide");
-  if (content.length > 2000) throw new Error("Le commentaire est trop long (max 2000 caractères)");
+  const parsed = parseOrThrow(commentInputSchema, { content, parentId });
+
+  // La ressource doit être visible par l'auteur du commentaire : sans ce
+  // contrôle, on pouvait commenter une ressource privée ou en brouillon.
+  const [target] = await db
+    .select({
+      authorId: resource.authorId,
+      status: resource.status,
+      privacy: resource.privacy,
+    })
+    .from(resource)
+    .where(eq(resource.id, resourceId))
+    .limit(1);
+
+  if (!target) throw new Error("Ressource introuvable");
+  if (!canViewResource(target, user)) throw new Error("Accès refusé");
+
+  // Le commentaire parent doit appartenir à la même ressource.
+  if (parsed.parentId) {
+    const [parent] = await db
+      .select({ resourceId: comment.resourceId })
+      .from(comment)
+      .where(eq(comment.id, parsed.parentId))
+      .limit(1);
+    if (!parent || parent.resourceId !== resourceId) {
+      throw new Error("Commentaire parent invalide");
+    }
+  }
 
   const id = crypto.randomUUID();
 
   await db.insert(comment).values({
     id,
-    content: content.trim(),
+    content: parsed.content,
     resourceId,
     authorId: user.id,
-    parentId: parentId || null,
+    parentId: parsed.parentId || null,
   });
 
   revalidatePath(`/ressource/${resourceId}`);

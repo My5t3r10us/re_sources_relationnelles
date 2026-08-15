@@ -93,16 +93,15 @@ describe("app/[locale]/(admin)/layout.tsx", () => {
   });
 
   it("redirects non-admin user", async () => {
-    mockGetServerSession.mockResolvedValue({ user: { id: "u1", name: "Alice" } });
-    qData = [[{ role: "citizen" }]];
+    // Le rôle provient de la session vérifiée : plus de relecture en base ici.
+    mockGetServerSession.mockResolvedValue({ user: { id: "u1", name: "Alice", role: "citizen" } });
     vi.resetModules();
     const { default: AdminLayout } = await import("@/app/[locale]/(admin)/layout");
     await expect(AdminLayout({ children: <div /> })).rejects.toThrow("REDIRECT");
   });
 
   it("renders for admin user", async () => {
-    mockGetServerSession.mockResolvedValue({ user: { id: "u1", name: "Alice" } });
-    qData = [[{ role: "admin" }]];
+    mockGetServerSession.mockResolvedValue({ user: { id: "u1", name: "Alice", role: "admin" } });
     vi.resetModules();
     const { default: AdminLayout } = await import("@/app/[locale]/(admin)/layout");
     const result = await AdminLayout({ children: <div>admin content</div> });
@@ -110,17 +109,18 @@ describe("app/[locale]/(admin)/layout.tsx", () => {
   });
 
   it("renders for super_admin user", async () => {
-    mockGetServerSession.mockResolvedValue({ user: { id: "u1", name: "Bob" } });
-    qData = [[{ role: "super_admin" }]];
+    mockGetServerSession.mockResolvedValue({ user: { id: "u1", name: "Bob", role: "super_admin" } });
     vi.resetModules();
     const { default: AdminLayout } = await import("@/app/[locale]/(admin)/layout");
     const result = await AdminLayout({ children: <div /> });
     expect(result).toBeTruthy();
   });
 
-  it("redirects when db returns no user row", async () => {
-    mockGetServerSession.mockResolvedValue({ user: { id: "u1", name: "Alice" } });
-    qData = [[]];
+  // Régression C-3 : un administrateur désactivé ne doit plus atteindre le
+  // panneau. getServerSession rejette désormais les comptes inactifs, donc
+  // la session est nulle et le layout redirige.
+  it("redirects a deactivated admin", async () => {
+    mockGetServerSession.mockResolvedValue(null);
     vi.resetModules();
     const { default: AdminLayout } = await import("@/app/[locale]/(admin)/layout");
     await expect(AdminLayout({ children: <div /> })).rejects.toThrow("REDIRECT");

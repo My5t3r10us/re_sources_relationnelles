@@ -12,6 +12,15 @@ vi.mock("@/lib/s3", () => ({
   getPublicUrl: (k: string) => `https://cdn.example.com/${k}`,
 }));
 
+// Ce fichier teste la route d'upload, pas la limitation de débit : sans ce
+// mock, tous les cas partagent l'identité « u1 » et épuisent le quota.
+// La limitation est couverte par tests/api/rate-limit.test.ts.
+vi.mock("@/lib/rate-limit", () => ({
+  RATE_LIMITS: { upload: { max: 20, windowSec: 3600 } },
+  requestIdentity: () => "user:u1",
+  checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }),
+}));
+
 import { POST } from "@/app/api/upload/route";
 import type { NextRequest } from "next/server";
 
@@ -20,6 +29,16 @@ function buildReq(formData: FormData): NextRequest {
     method: "POST",
     body: formData,
   }) as unknown as NextRequest;
+}
+
+/**
+ * Le type est désormais déduit des octets d'en-tête : les fixtures doivent
+ * porter une vraie signature, un `type` déclaré ne suffit plus.
+ */
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+function pngBytes(extra = 16): Uint8Array {
+  return new Uint8Array([...PNG_MAGIC, ...new Uint8Array(extra)]);
 }
 
 beforeEach(() => {
@@ -57,11 +76,23 @@ describe("POST /api/upload", () => {
     expect(res.status).toBe(400);
   });
 
+  // Régression M-3 : le `Content-Type` déclaré par le client servait de filtre
+  // ET d'en-tête renvoyé par le bucket public. N'importe quel contenu pouvait
+  // donc être hébergé sous une étiquette d'image.
+  it("rejects a file whose bytes do not match the declared mime type", async () => {
+    getServerSession.mockResolvedValue({ user: { id: "u1" } });
+    const fd = new FormData();
+    fd.append("file", new File(["<html>pas une image</html>"], "fake.png", { type: "image/png" }));
+    const res = await POST(buildReq(fd));
+    expect(res.status).toBe(400);
+    expect(uploadObject).not.toHaveBeenCalled();
+  });
+
   it("uploads to s3 and returns publicUrl", async () => {
     getServerSession.mockResolvedValue({ user: { id: "u1" } });
     uploadObject.mockResolvedValue(undefined);
     const fd = new FormData();
-    fd.append("file", new File(["hello"], "img.png", { type: "image/png" }));
+    fd.append("file", new File([pngBytes()], "img.png", { type: "image/png" }));
     const res = await POST(buildReq(fd));
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -69,11 +100,29 @@ describe("POST /api/upload", () => {
     expect(body.publicUrl).toMatch(/\.png$/);
   });
 
+  // L'extension et le Content-Type stockés proviennent des octets, pas du nom
+  // de fichier fourni par le client.
+  it("derives extension and stored content type from the bytes", async () => {
+    getServerSession.mockResolvedValue({ user: { id: "u1" } });
+    uploadObject.mockResolvedValue(undefined);
+    const fd = new FormData();
+    fd.append("file", new File([pngBytes()], "trompeur.mp4", { type: "video/mp4" }));
+    const res = await POST(buildReq(fd));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.publicUrl).toMatch(/\.png$/);
+    expect(uploadObject).toHaveBeenCalledWith(
+      expect.stringMatching(/^u1\/.*\.png$/),
+      expect.anything(),
+      "image/png"
+    );
+  });
+
   it("500 on s3 error", async () => {
     getServerSession.mockResolvedValue({ user: { id: "u1" } });
     uploadObject.mockRejectedValue(new Error("Boom"));
     const fd = new FormData();
-    fd.append("file", new File(["x"], "a.png", { type: "image/png" }));
+    fd.append("file", new File([pngBytes()], "a.png", { type: "image/png" }));
     const res = await POST(buildReq(fd));
     expect(res.status).toBe(500);
   });

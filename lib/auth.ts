@@ -5,6 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { authLog } from "@/db/schema";
+import { MIN_PASSWORD_LENGTH } from "@/lib/validation";
 
 export const auth = betterAuth({
   plugins: [
@@ -18,20 +19,46 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  // Les origines de développement (localhost, émulateur Android) et le joker
+  // « exp://* » d'Expo Go ne sont acceptés qu'en dehors de la production, où
+  // seuls le domaine public et le schéma de l'application native restent
+  // autorisés.
   trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:8081",
-    "http://localhost:19000",
-    "http://localhost:19006",
-    "http://10.0.2.2:3000",
     "https://resource.baptistemoine.dev",
     "re-sources://",
-    "exp://*",
+    ...(process.env.NODE_ENV === "production"
+      ? []
+      : [
+          "http://localhost:3000",
+          "http://localhost:8081",
+          "http://localhost:19000",
+          "http://localhost:19006",
+          "http://10.0.2.2:3000",
+          "exp://*",
+        ]),
   ],
   advanced: {
     // Force le flag « Secure » sur les cookies en production (HTTPS uniquement).
     // Laissé désactivé en dev pour que le login fonctionne sur http://localhost.
     useSecureCookies: process.env.NODE_ENV === "production",
+  },
+  rateLimit: {
+    // Activé hors développement (better-auth ne l'active de lui-même qu'en
+    // production). Stockage en base : les compteurs survivent aux redémarrages
+    // et sont partagés entre instances, contrairement au défaut en mémoire.
+    enabled: process.env.NODE_ENV !== "development",
+    storage: "database",
+    window: 60,
+    max: 100,
+    customRules: {
+      // Force brute sur les mots de passe.
+      "/sign-in/email": { window: 300, max: 10 },
+      "/sign-up/email": { window: 3600, max: 5 },
+      // Un code TOTP ne fait que 6 chiffres : sans plafond, l'espace 10^6 est
+      // parcourable. Idem pour les codes de secours.
+      "/two-factor/verify-totp": { window: 300, max: 5 },
+      "/two-factor/verify-backup-code": { window: 300, max: 5 },
+    },
   },
   session: {
     // Durée de validité courte : la session expire après 24h.
@@ -63,6 +90,10 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    // Politique appliquée côté serveur, donc valable aussi pour l'inscription
+    // mobile et tout appel direct à l'API — l'attribut `minLength` du
+    // formulaire web ne contraint que le navigateur.
+    minPasswordLength: MIN_PASSWORD_LENGTH,
   },
   user: {
     additionalFields: {

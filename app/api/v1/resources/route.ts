@@ -3,6 +3,9 @@ import { resource, category, user, resourceFile, favorite, completion, savedReso
 import { eq, and, or, ilike, desc, count, sql, inArray } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { getApiSession, requireApiAuth } from "@/lib/api-auth";
+import { resourceInputSchema, firstIssueMessage } from "@/lib/validation";
+import { assertOwnedObjectUrl } from "@/lib/s3";
+import { enforceRateLimit, requestIdentity, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -113,11 +116,29 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const currentUser = await requireApiAuth(req);
-    const body = await req.json();
-    const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } = body;
 
-    if (!title?.trim() || !content?.trim()) {
-      return apiError("VALIDATION_ERROR", "Le titre et le contenu sont requis", 400);
+    const limited = await enforceRateLimit(
+      "resourceCreate",
+      requestIdentity(req, currentUser.id),
+      RATE_LIMITS.resourceCreate
+    );
+    if (limited) return limited;
+
+    const parsed = resourceInputSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return apiError("VALIDATION_ERROR", firstIssueMessage(parsed.error), 400);
+    }
+    const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } =
+      parsed.data;
+
+    // Les URL de fichiers viennent du client : elles doivent désigner des
+    // objets envoyés par cet utilisateur, sinon une ressource peut référencer
+    // — puis faire supprimer — le fichier d'autrui.
+    try {
+      if (imageUrl) assertOwnedObjectUrl(imageUrl, currentUser.id);
+      for (const a of attachments ?? []) assertOwnedObjectUrl(a.url, currentUser.id);
+    } catch (err) {
+      return apiError("VALIDATION_ERROR", (err as Error).message, 400);
     }
 
     const id = crypto.randomUUID();
@@ -139,8 +160,8 @@ export async function POST(req: Request) {
       title: title.trim(),
       content,
       summary: summary?.trim() || title.trim().substring(0, 160),
-      mediaType: (mediaType || "article") as never,
-      privacy: privacy || "public",
+      mediaType,
+      privacy,
       status: isDraft ? "draft" : "pending",
       categoryId: resolvedCategoryId,
       authorId: currentUser.id,

@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { user, account } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { MIN_PASSWORD_LENGTH } from "@/lib/validation";
 
 export interface CreateAdminUserInput {
   name: string;
@@ -24,8 +25,15 @@ export async function createAdminUserCore(
   if (!name || !email || !password) {
     return { error: { code: "INVALID_INPUT", message: "Nom, email et mot de passe sont requis" } };
   }
-  if (password.length < 8) {
-    return { error: { code: "INVALID_INPUT", message: "Le mot de passe doit faire au moins 8 caractères" } };
+  // Politique appliquée côté serveur : l'attribut `minLength` du formulaire ne
+  // contraint que le navigateur et se contourne trivialement.
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return {
+      error: {
+        code: "INVALID_INPUT",
+        message: `Le mot de passe doit faire au moins ${MIN_PASSWORD_LENGTH} caractères`,
+      },
+    };
   }
   if (!["moderator", "admin", "super_admin"].includes(role)) {
     return { error: { code: "INVALID_INPUT", message: "Rôle invalide" } };

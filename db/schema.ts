@@ -4,6 +4,7 @@ import {
   timestamp,
   boolean,
   integer,
+  bigint,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -116,13 +117,42 @@ export const twoFactor = pgTable("two_factor", {
 
 // Journal des connexions — append-only. Pas de FK vers `user` pour conserver
 // l'historique même après suppression d'un compte (exigence de journalisation).
+/**
+ * Journal d'authentification ET d'administration.
+ *
+ * Seules les connexions étaient tracées : aucune action de modération ni de
+ * gestion de compte ne l'était, si bien qu'un incident (changement de rôle,
+ * désactivation, suppression) ne laissait aucune piste d'audit. Les trois
+ * colonnes `target*` décrivent l'objet de l'action.
+ */
 export const authLog = pgTable("auth_log", {
   id: text("id").primaryKey(),
   userId: text("user_id"),
-  event: text("event").notNull(), // "login"
+  event: text("event").notNull(), // "login", "user.role_changed", "resource.deleted"…
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
+  targetType: text("target_type"), // "user" | "resource" | "comment" | "report" | "category"
+  targetId: text("target_id"),
+  metadata: text("metadata"), // JSON sérialisé (ancien/nouveau rôle, statut…)
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/**
+ * Compteurs de limitation de débit.
+ *
+ * Partagée entre better-auth (stockage `database`, qui écrit les clés de ses
+ * propres routes) et `lib/rate-limit.ts` (clés préfixées `api:`). Un stockage
+ * en base plutôt qu'en mémoire survit aux redémarrages et fonctionne en
+ * multi-instance.
+ *
+ * `lastRequest` est un horodatage epoch en millisecondes : `integer` (int4)
+ * déborderait, d'où le `bigint`.
+ */
+export const rateLimit = pgTable("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull().default(0),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull().default(0),
 });
 
 export const verification = pgTable("verification", {

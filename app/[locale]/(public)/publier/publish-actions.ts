@@ -3,8 +3,9 @@
 import { db } from "@/db";
 import { resource, category, resourceFile } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
-import { deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
-import { getServerSession } from "@/lib/auth-server";
+import { assertOwnedObjectUrl, deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
+import { requireUser } from "@/lib/auth-server";
+import { parseOrThrow, resourceInputSchema } from "@/lib/validation";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -26,7 +27,7 @@ interface PublishParams {
   attachments?: AttachmentInput[];
 }
 
-async function resolveCategoryId(categoryId: string | null): Promise<string | null> {
+async function resolveCategoryId(categoryId: string | null | undefined): Promise<string | null> {
   if (!categoryId) return null;
   // If it looks like a UUID, use it directly
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
@@ -42,14 +43,16 @@ async function resolveCategoryId(categoryId: string | null): Promise<string | nu
 }
 
 export async function publishResource(params: PublishParams) {
-  const session = await getServerSession();
-  if (!session?.user) throw new Error("Non authentifié");
+  const user = await requireUser();
 
-  const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } = params;
+  const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } =
+    parseOrThrow(resourceInputSchema, params);
 
-  if (!title?.trim() || !content?.trim()) {
-    throw new Error("Le titre et le contenu sont requis");
-  }
+  // Une URL de fichier fournie par le client doit désigner un objet envoyé par
+  // cet utilisateur, sinon la ressource peut référencer — et faire supprimer —
+  // le fichier d'un autre.
+  if (imageUrl) assertOwnedObjectUrl(imageUrl, user.id);
+  for (const a of attachments ?? []) assertOwnedObjectUrl(a.url, user.id);
 
   const id = crypto.randomUUID();
   const wordCount = content.trim().split(/\s+/).length;
@@ -61,17 +64,11 @@ export async function publishResource(params: PublishParams) {
     title: title.trim(),
     content,
     summary: summary?.trim() || title.trim().substring(0, 160),
-    mediaType: (mediaType || "article") as
-      | "article"
-      | "video"
-      | "pdf"
-      | "exercise"
-      | "audio"
-      | "protocol",
-    privacy: privacy || "public",
+    mediaType,
+    privacy,
     status: isDraft ? "draft" : "pending",
     categoryId: resolvedCategoryId,
-    authorId: session.user.id,
+    authorId: user.id,
     imageUrl: imageUrl || null,
     readingTime,
   });
@@ -93,14 +90,10 @@ export async function publishResource(params: PublishParams) {
 }
 
 export async function updateResource(resourceId: string, params: PublishParams) {
-  const session = await getServerSession();
-  if (!session?.user) throw new Error("Non authentifié");
+  const user = await requireUser();
 
-  const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } = params;
-
-  if (!title?.trim() || !content?.trim()) {
-    throw new Error("Le titre et le contenu sont requis");
-  }
+  const { title, content, summary, mediaType, categoryId, privacy, isDraft, imageUrl, attachments } =
+    parseOrThrow(resourceInputSchema, params);
 
   // Verify ownership
   const [existing] = await db
@@ -110,7 +103,10 @@ export async function updateResource(resourceId: string, params: PublishParams) 
     .limit(1);
 
   if (!existing) throw new Error("Ressource introuvable");
-  if (existing.authorId !== session.user.id) throw new Error("Non autorisé");
+  if (existing.authorId !== user.id) throw new Error("Non autorisé");
+
+  if (imageUrl) assertOwnedObjectUrl(imageUrl, user.id);
+  for (const a of attachments ?? []) assertOwnedObjectUrl(a.url, user.id);
 
   const wordCount = content.trim().split(/\s+/).length;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
@@ -122,14 +118,8 @@ export async function updateResource(resourceId: string, params: PublishParams) 
       title: title.trim(),
       content,
       summary: summary?.trim() || title.trim().substring(0, 160),
-      mediaType: (mediaType || "article") as
-        | "article"
-        | "video"
-        | "pdf"
-        | "exercise"
-        | "audio"
-        | "protocol",
-      privacy: privacy || "public",
+      mediaType,
+      privacy,
       status: isDraft ? "draft" : "pending",
       categoryId: resolvedCategoryId,
       imageUrl: imageUrl || null,
@@ -148,7 +138,7 @@ export async function updateResource(resourceId: string, params: PublishParams) 
 
     await Promise.allSettled(
       oldFiles.map(({ url }) => {
-        const key = getObjectKeyFromUrl(url);
+        const key = getObjectKeyFromUrl(url, user.id);
         return key ? deleteObject(key) : Promise.resolve();
       })
     );
@@ -170,8 +160,7 @@ export async function updateResource(resourceId: string, params: PublishParams) 
 }
 
 export async function submitDraftForReview(resourceId: string) {
-  const session = await getServerSession();
-  if (!session?.user) throw new Error("Non authentifié");
+  const user = await requireUser();
 
   const [existing] = await db
     .select({ authorId: resource.authorId, status: resource.status })
@@ -180,7 +169,7 @@ export async function submitDraftForReview(resourceId: string) {
     .limit(1);
 
   if (!existing) throw new Error("Ressource introuvable");
-  if (existing.authorId !== session.user.id) throw new Error("Non autorisé");
+  if (existing.authorId !== user.id) throw new Error("Non autorisé");
   if (existing.status !== "draft") throw new Error("Seuls les brouillons peuvent être soumis");
 
   await db

@@ -3,6 +3,7 @@ import { report, resource, comment } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { requireApiAuth } from "@/lib/api-auth";
+import { enforceRateLimit, requestIdentity, RATE_LIMITS } from "@/lib/rate-limit";
 
 const VALID_REASONS = ["harassment", "spam", "misinformation", "inappropriate", "other"] as const;
 type Reason = (typeof VALID_REASONS)[number];
@@ -10,6 +11,15 @@ type Reason = (typeof VALID_REASONS)[number];
 export async function POST(req: Request) {
   try {
     const currentUser = await requireApiAuth(req);
+
+    // Sans plafond, la file de modération est inondable par un seul compte.
+    const limited = await enforceRateLimit(
+      "report",
+      requestIdentity(req, currentUser.id),
+      RATE_LIMITS.report
+    );
+    if (limited) return limited;
+
     const body = await req.json();
     const { reason, description, resourceId, commentId } = body ?? {};
 

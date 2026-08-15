@@ -15,11 +15,15 @@ import {
   resourceSession,
   sessionParticipant,
   sessionMessage,
+  rateLimit,
 } from "@/db/schema";
 import { getTableName, sql } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 
 const TABLES_IN_TRUNCATION_ORDER = [
+  // Les compteurs de limitation de débit doivent repartir de zéro entre les
+  // tests, sinon ils fuient d'un test à l'autre et finissent par renvoyer 429.
+  rateLimit,
   sessionMessage,
   sessionParticipant,
   resourceSession,
