@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "bun db/migrate.ts",
     "db:baseline": "bun db/baseline.ts",
+    "db:purge": "bun db/purge-auth-log.ts",
     "db:studio": "drizzle-kit studio",
     "db:seed": "npx tsx db/seed.ts",
     "db:test:push": "cross-env NODE_ENV=test drizzle-kit push",

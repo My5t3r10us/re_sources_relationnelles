@@ -16,6 +16,7 @@ import {
   sessionParticipant,
   sessionMessage,
   rateLimit,
+  authLog,
 } from "@/db/schema";
 import { getTableName, sql } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
@@ -24,6 +25,10 @@ const TABLES_IN_TRUNCATION_ORDER = [
   // Les compteurs de limitation de débit doivent repartir de zéro entre les
   // tests, sinon ils fuient d'un test à l'autre et finissent par renvoyer 429.
   rateLimit,
+  // `auth_log` n'a pas de clé étrangère vers `user` (le journal doit survivre à
+  // la suppression d'un compte) : le TRUNCATE de `user` ne la vide donc pas en
+  // cascade, et ses lignes fuiraient d'un test à l'autre sans cette entrée.
+  authLog,
   sessionMessage,
   sessionParticipant,
   resourceSession,

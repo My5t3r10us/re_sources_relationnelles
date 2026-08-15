@@ -44,6 +44,30 @@ export function getObjectKeyFromUrl(url: string, ownerId: string): string | null
   return isKeyOwnedBy(key, ownerId) ? key : null;
 }
 
+/**
+ * Extrait la clé S3 d'une URL **déjà stockée en base**, sans contrôle de
+ * propriétaire.
+ *
+ * À n'utiliser que sur des URL relues depuis la base : toute URL entrante a
+ * déjà franchi `assertOwnedObjectUrl` à l'écriture (publication et édition de
+ * ressource), donc sa possession a été vérifiée au moment où elle est devenue
+ * une donnée. Ne jamais l'appeler sur une URL provenant directement d'une
+ * requête — ce serait rouvrir C-4.
+ *
+ * Nécessaire depuis l'anonymisation RGPD (`lib/rgpd.ts`) : les ressources d'un
+ * compte supprimé sont réattribuées au compte « Utilisateur supprimé » alors
+ * que leurs clés gardent le préfixe du propriétaire d'origine. Un
+ * `getObjectKeyFromUrl(url, nouvelAuteur)` ne les reconnaîtrait plus, et une
+ * suppression ultérieure laisserait les objets orphelins dans le bucket.
+ */
+export function getStoredObjectKey(url: string): string | null {
+  const key = extractRawKey(url);
+  if (key === null) return null;
+  // Même durcissement que `isKeyOwnedBy`, sans la comparaison de préfixe.
+  if (key.includes("..") || key.startsWith("/")) return null;
+  return key;
+}
+
 function extractRawKey(url: string): string | null {
   const publicPrefix = `${PUBLIC_URL_BASE}/`;
   if (url.startsWith(publicPrefix)) return url.slice(publicPrefix.length);

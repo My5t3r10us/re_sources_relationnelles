@@ -117,6 +117,20 @@ export const sessionMessageSchema = z.object({
 });
 
 /**
+ * Suppression de compte par son titulaire (art. 17 RGPD).
+ *
+ * Le mot de passe est revérifié à ce moment précis : un cookie de session volé
+ * ne doit pas suffire à effacer un compte. Aucune contrainte de longueur ici —
+ * on valide un mot de passe existant, pas on en crée un.
+ */
+export const accountDeletionSchema = z.object({
+  password: z.string().min(1, "Le mot de passe est requis").max(512),
+  confirmation: z.literal("SUPPRIMER", {
+    message: "Saisissez SUPPRIMER pour confirmer",
+  }),
+});
+
+/**
  * Réduit une erreur Zod à un message unique, lisible par l'utilisateur.
  * Les routes API le passent à `apiError(...)`, les Server Actions à `Error`.
  */
