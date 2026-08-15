@@ -3,11 +3,20 @@ import { resourceSession, sessionParticipant } from "@/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { requireApiAuth } from "@/lib/api-auth";
+import { enforceRateLimit, requestIdentity, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(req: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const currentUser = await requireApiAuth(req);
     const { code } = await params;
+
+    // Freine l'énumération de codes de session.
+    const limited = await enforceRateLimit(
+      "sessionJoin",
+      requestIdentity(req, currentUser.id),
+      RATE_LIMITS.sessionJoin
+    );
+    if (limited) return limited;
 
     const [session] = await db
       .select({ id: resourceSession.id, status: resourceSession.status })

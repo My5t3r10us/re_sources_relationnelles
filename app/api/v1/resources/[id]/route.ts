@@ -1,10 +1,11 @@
 import { db } from "@/db";
 import { resource, category, user, resourceFile, favorite, completion, savedResource } from "@/db/schema";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { getApiSession, requireApiAuth } from "@/lib/api-auth";
 import { assertOwnedObjectUrl, deleteObject, getObjectKeyFromUrl } from "@/lib/s3";
 import { resourceInputSchema, firstIssueMessage } from "@/lib/validation";
+import { resourceViewDenial } from "@/lib/resource-access";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -42,15 +43,9 @@ export async function GET(req: Request, { params }: Params) {
 
   if (!row) return apiError("NOT_FOUND", "Ressource introuvable", 404);
 
-  const isAdmin = session?.role === "admin" || session?.role === "super_admin";
-  const isAuthor = session?.id === row.authorId;
-
-  if (row.status !== "published" && !isAdmin && !isAuthor) {
-    return apiError("NOT_FOUND", "Ressource introuvable", 404);
-  }
-  if (row.privacy === "private" && !isAuthor && !isAdmin) {
-    return apiError("FORBIDDEN", "Accès refusé", 403);
-  }
+  const denial = resourceViewDenial(row, session);
+  if (denial === "not_found") return apiError("NOT_FOUND", "Ressource introuvable", 404);
+  if (denial === "forbidden") return apiError("FORBIDDEN", "Accès refusé", 403);
 
   const files = await db
     .select({ id: resourceFile.id, url: resourceFile.url, name: resourceFile.name, contentType: resourceFile.contentType })
@@ -78,7 +73,14 @@ export async function GET(req: Request, { params }: Params) {
     isSaved = !!saved;
   }
 
-  await db.update(resource).set({ viewCount: (row.viewCount ?? 0) + 1 }).where(eq(resource.id, id));
+  // Incrément atomique : la variante lecture-modification-écriture perdait les
+  // vues concurrentes. Réservé aux ressources publiées.
+  if (row.status === "published") {
+    await db
+      .update(resource)
+      .set({ viewCount: sql`${resource.viewCount} + 1` })
+      .where(eq(resource.id, id));
+  }
 
   return apiSuccess({ ...row, files, isFavorite, isRead, isSaved });
 }
