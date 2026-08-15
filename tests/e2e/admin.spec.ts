@@ -1,7 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { E2E_ADMIN, E2E_CITIZEN, login } from "./helpers/auth";
+import { resetRateLimits } from "../setup/db";
 
 test.describe("Admin moderation", () => {
+  // Chaque test se connecte : sans remise à zéro, le plafond par IP de
+  // better-auth (10 sign-in / 5 min) tombe en cours de suite.
+  test.beforeEach(resetRateLimits);
+
   test("citizen cannot access admin panel", async ({ page }) => {
     await login(page, E2E_CITIZEN);
     await page.goto("/fr/admin/statistiques");
@@ -52,7 +57,9 @@ test.describe("Admin moderation", () => {
       await nameField.fill(`Cat ${slug}`);
       await slugField.fill(slug);
       await page.getByRole("button", { name: /enregistrer|créer|valider/i }).first().click();
-      await expect(page.getByText(slug)).toBeVisible({ timeout: 10_000 });
+      // `exact` : le nom de la catégorie contient lui aussi le slug
+      // (« Cat e2e-… »), et une correspondance partielle en viserait deux.
+      await expect(page.getByText(slug, { exact: true })).toBeVisible({ timeout: 10_000 });
     }
   });
 });

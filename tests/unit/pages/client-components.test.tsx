@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 // ─── Next.js mocks ─────────────────────────────────────────────────────────
@@ -521,7 +521,23 @@ describe("create-user-modal.tsx", () => {
 describe("stats-export.tsx", () => {
   it("renders export button", async () => {
     const { StatsExportButton } = await import("@/app/[locale]/(admin)/admin/statistiques/stats-export");
-    render(<StatsExportButton stats={{ resources: 10, users: 5, comments: 20, reports: 2, views: 100, categories: 3, sessions: 1 }} />);
+    render(
+      <StatsExportButton
+        stats={{
+          totalUsers: 5,
+          totalResources: 10,
+          views: 100,
+          pendingResources: 2,
+          publishedResources: 8,
+          totalReports: 2,
+          unresolvedReports: 1,
+          totalComments: 20,
+          categoryStats: [{ name: "Santé", count: 3 }],
+          roleStats: [{ role: "citizen", count: 4 }],
+          period: "all",
+        }}
+      />,
+    );
     expect(document.body).toBeTruthy();
   });
 });
@@ -567,7 +583,7 @@ describe("resource-admin-actions.tsx", () => {
 describe("category-select.tsx", () => {
   it("renders category select", async () => {
     const { CategorySelect } = await import("@/app/[locale]/(admin)/admin/ressources/category-select");
-    render(<CategorySelect resourceId="r1" currentCategoryId={null} categories={[{ id: "c1", name: "Santé", slug: "sante" }]} />);
+    render(<CategorySelect categories={[{ id: "c1", name: "Santé" }]} defaultValue="" />);
     expect(document.body).toBeTruthy();
   });
 });

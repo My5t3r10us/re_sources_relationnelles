@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 
 function Wrapper() {
-  const [value, setValue] = (require("react") as typeof import("react")).useState("");
+  const [value, setValue] = useState("");
   return <MarkdownEditor value={value} onChange={setValue} />;
 }
 

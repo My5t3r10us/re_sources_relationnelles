@@ -1,13 +1,26 @@
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
 import { AddressInfo } from "node:net";
 
-type NextRouteHandler = (req: Request, ctx: { params: Promise<Record<string, string | string[]>> }) => Promise<Response> | Response;
+export type RouteParams = Record<string, string | string[]>;
 
-export interface RouteRegistration {
+/**
+ * Le harness ne connaît des paramètres de route que leur forme générique, alors
+ * que chaque handler Next déclare la sienne (`{ params: Promise<{ id: string }> }`).
+ * Sous `strictFunctionTypes`, un paramètre plus étroit rend le handler
+ * inassignable : on laisse donc la forme des params ouverte côté registre et on
+ * la referme sur `RouteParams` à l'appel, où l'objet est réellement construit.
+ */
+type NextRouteHandler<P = RouteParams> = (
+  req: Request,
+  ctx: { params: Promise<P> },
+) => Promise<Response> | Response;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface RouteRegistration<P = any> {
   /** Path template like "/api/v1/resources/[id]" or "/api/v1/resources" */
   path: string;
   /** Imported route handlers (GET/POST/PATCH/DELETE/PUT) */
-  handlers: Partial<Record<"GET" | "POST" | "PATCH" | "PUT" | "DELETE", NextRouteHandler>>;
+  handlers: Partial<Record<"GET" | "POST" | "PATCH" | "PUT" | "DELETE", NextRouteHandler<P>>>;
 }
 
 interface CompiledRoute {

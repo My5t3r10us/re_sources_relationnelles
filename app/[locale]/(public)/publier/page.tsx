@@ -219,7 +219,13 @@ export default function PublierPage() {
 
         {/* Title */}
         <div className="mb-8">
+          {/* Le champ n'affiche qu'un placeholder : un libellé masqué le rend
+              annonçable par les lecteurs d'écran sans toucher au visuel. */}
+          <label htmlFor="resource-title" className="sr-only">
+            Titre
+          </label>
           <input
+            id="resource-title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -243,10 +249,14 @@ export default function PublierPage() {
         <div className="grid grid-cols-2 gap-10 mb-8">
           {/* Category */}
           <div>
-            <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+            <label
+              htmlFor="resource-category"
+              className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3"
+            >
               Catégorie
             </label>
             <select
+              id="resource-category"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
               className="w-full bg-transparent border-0 border-b border-black/10 pb-2 text-sm text-on-surface focus:outline-none focus:border-primary/40 transition-colors cursor-pointer"
@@ -261,10 +271,12 @@ export default function PublierPage() {
 
           {/* Visibility */}
           <div>
-            <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+            {/* Un <label> ne peut pas désigner un groupe de boutons radio :
+                le nom du groupe passe par role/aria-label. */}
+            <span className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
               Visibilité
-            </label>
-            <div className="space-y-2.5">
+            </span>
+            <div className="space-y-2.5" role="radiogroup" aria-label="Visibilité">
               {[
                 { value: "public", label: "Public", desc: "Visible par toute la communauté" },
                 { value: "private", label: "Privé", desc: "Accessible uniquement par vous" },
@@ -310,10 +322,14 @@ export default function PublierPage() {
 
         {/* Format */}
         <div className="mb-10">
-          <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+          <label
+            htmlFor="resource-format"
+            className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3"
+          >
             Format
           </label>
           <select
+            id="resource-format"
             value={mediaType}
             onChange={(e) => setMediaType(e.target.value)}
             className="w-full bg-transparent border-0 border-b border-black/10 pb-2 text-sm text-on-surface focus:outline-none focus:border-primary/40 transition-colors cursor-pointer"
@@ -328,9 +344,9 @@ export default function PublierPage() {
 
         {/* Cover image */}
         <div className="mb-10">
-          <label className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
+          <span className="block text-[10px] font-bold tracking-widest uppercase text-on-surface-variant/50 mb-3">
             Image de couverture
-          </label>
+          </span>
           {coverImage ? (
             <div className="relative rounded-xl overflow-hidden border border-black/10 aspect-16/6">
               <Image

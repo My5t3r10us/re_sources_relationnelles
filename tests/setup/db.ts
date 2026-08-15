@@ -48,6 +48,22 @@ export async function resetDb() {
   await db.execute(sql.raw(`TRUNCATE TABLE ${names} RESTART IDENTITY CASCADE`));
 }
 
+/**
+ * Vide les seuls compteurs de limitation de débit.
+ *
+ * better-auth plafonne `/sign-in/email` à 10 requêtes par tranche de 5 minutes
+ * et `/sign-up/email` à 5 par heure (cf. `lib/auth.ts`), et la clé est l'adresse
+ * IP : toute la suite E2E partage donc un unique budget depuis le runner. Avec
+ * un `login()` en `beforeEach` et jusqu'à deux relances par test, le plafond est
+ * franchi en cours de suite et les connexions suivantes repartent en 429.
+ *
+ * Contrairement à `resetDb()`, cette fonction ne touche pas aux données seedées
+ * par le global setup : elle peut donc être appelée entre chaque test E2E.
+ */
+export async function resetRateLimits() {
+  await db.execute(sql.raw(`TRUNCATE TABLE "${getTableName(rateLimit)}"`));
+}
+
 export type TestUserRole = "citizen" | "moderator" | "admin" | "super_admin";
 
 export interface CreatedTestUser {

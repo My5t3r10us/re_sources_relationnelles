@@ -49,8 +49,14 @@ export function CategoryForm() {
       {error && <p className="text-error text-sm mb-4">{error}</p>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-xs font-semibold text-on-surface-variant mb-1">Nom *</label>
+          <label
+            htmlFor="new-category-name"
+            className="block text-xs font-semibold text-on-surface-variant mb-1"
+          >
+            Nom *
+          </label>
           <input
+            id="new-category-name"
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
             placeholder="ex: Santé mentale"
@@ -58,8 +64,14 @@ export function CategoryForm() {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-on-surface-variant mb-1">Slug *</label>
+          <label
+            htmlFor="new-category-slug"
+            className="block text-xs font-semibold text-on-surface-variant mb-1"
+          >
+            Slug *
+          </label>
           <input
+            id="new-category-slug"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
             placeholder="ex: sante-mentale"
@@ -67,8 +79,14 @@ export function CategoryForm() {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-on-surface-variant mb-1">Description</label>
+          <label
+            htmlFor="new-category-description"
+            className="block text-xs font-semibold text-on-surface-variant mb-1"
+          >
+            Description
+          </label>
           <input
+            id="new-category-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description courte"
@@ -76,7 +94,7 @@ export function CategoryForm() {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-on-surface-variant mb-1">Icône</label>
+          <span className="block text-xs font-semibold text-on-surface-variant mb-1">Icône</span>
           <EmojiPicker value={icon} onChange={setIcon} />
         </div>
       </div>
