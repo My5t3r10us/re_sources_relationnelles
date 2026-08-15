@@ -1,0 +1,27 @@
+# `blank_issues_enabled: false` : chaque demande doit arriver qualifiée. Une
+# anomalie sans étapes de reproduction coûte plus cher à instruire qu'à corriger.
+blank_issues_enabled: false
+
+contact_links:
+  - name: "🔒 Signaler une faille de sécurité"
+    url: "https://github.com/My5t3r10us/re_sources_relationnelles/security/advisories/new"
+    about: >-
+      N'ouvrez JAMAIS d'issue publique pour une vulnérabilité : ce serait en
+      publier le mode d'emploi avant sa correction. Passez par un avis de
+      sécurité privé.
+
+  - name: "🛡️ Exercer ses droits RGPD"
+    url: "https://github.com/My5t3r10us/re_sources_relationnelles/blob/master/docs/PLAN_SECURISATION.md#7-conformité-rgpd"
+    about: >-
+      L'export et la suppression de vos données s'effectuent directement depuis
+      votre profil, sans démarche. Pour les autres droits, contactez le DPO.
+
+  - name: "🚨 Urgence — détresse ou danger"
+    url: "https://www.3114.fr"
+    about: >-
+      Ce dépôt n'est pas un canal d'assistance. En cas de danger, composez le 15,
+      le 112 ou le 3114 (24h/24, gratuit).
+
+  - name: "📖 Guide de contribution"
+    url: "https://github.com/My5t3r10us/re_sources_relationnelles/blob/master/CONTRIBUTING.md"
+    about: "Mise en route, conventions de branches et de commits, grille de revue."

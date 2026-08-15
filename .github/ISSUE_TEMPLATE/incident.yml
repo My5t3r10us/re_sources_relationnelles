@@ -1,0 +1,85 @@
+name: "Incident de production"
+description: "Ouvrir la main courante d'un incident affectant le service en production."
+title: "[Incident] "
+labels: ["incident", "S1-critique", "P0-immediat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Ouvrez cette issue immédiatement, sans attendre la résolution** : elle
+        sert de main courante horodatée de l'incident.
+
+        Rappel du circuit : qualification → confinement → correction depuis une
+        branche `hotfix/` partant de `master` → mise en production → report sur
+        `develop` → *post mortem*.
+
+  - type: textarea
+    id: constat
+    attributes:
+      label: Constat
+      description: Ce qui est observé, et depuis quand.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      multiple: true
+      options:
+        - Service totalement indisponible
+        - Fonctionnalité majeure indisponible
+        - Dégradation des performances
+        - Fuite ou exposition de données personnelles
+        - Perte ou corruption de données
+        - Compromission d'un compte d'administration
+    validations:
+      required: true
+
+  - type: input
+    id: detection
+    attributes:
+      label: Heure de détection
+      placeholder: "2026-08-15 14:32 UTC"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version en production
+      description: "`GET /api/health`, champ `version`."
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: rgpd
+    attributes:
+      label: Volet RGPD
+      description: |
+        Le délai de 72 h de l'article 33 court à partir de la **connaissance**
+        de la violation, pas de sa résolution.
+      options:
+        - label: "Des données personnelles sont potentiellement concernées"
+        - label: "Le DPO a été informé"
+        - label: "Notification CNIL requise sous 72 h"
+
+  - type: textarea
+    id: confinement
+    attributes:
+      label: Mesures de confinement prises
+      placeholder: |
+        - Sessions révoquées
+        - Secrets tournés
+        - Retour arrière sur le tag vX.Y.Z
+
+  - type: textarea
+    id: chronologie
+    attributes:
+      label: Chronologie
+      description: À compléter au fil de l'incident.
+      value: |
+        | Heure | Événement |
+        |---|---|
+        |  | Détection |

@@ -1,0 +1,96 @@
+name: "Signalement d'anomalie"
+description: "Signaler un comportement incorrect de la plateforme."
+title: "[Anomalie] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de ce signalement.
+
+        > ⚠️ **Faille de sécurité : n'utilisez pas ce formulaire.** Une
+        > vulnérabilité publiée avant sa correction en devient le mode d'emploi.
+        > Voir les canaux privés de contact.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Que se passe-t-il ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes de reproduction
+      description: |
+        Une anomalie non reproductible coûte plus cher à instruire qu'à corriger.
+      placeholder: |
+        1. Se connecter en tant que citoyen
+        2. Ouvrir /catalogue
+        3. Filtrer par catégorie « Famille »
+        4. Observer…
+    validations:
+      required: true
+
+  - type: textarea
+    id: attendu
+    attributes:
+      label: Comportement attendu
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environnement
+    attributes:
+      label: Environnement
+      options:
+        - Production
+        - Préproduction
+        - Développement local
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "Visible via `GET /api/health`, champ `version`."
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severite
+    attributes:
+      label: Sévérité proposée
+      description: Elle sera confirmée au triage.
+      options:
+        - "S1 — Critique : service indisponible, fuite de données"
+        - "S2 — Majeure : fonction essentielle inutilisable, sans contournement"
+        - "S3 — Mineure : gêne avec contournement"
+        - "S4 — Cosmétique : affichage ou libellé"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: domaine
+    attributes:
+      label: Domaine
+      multiple: true
+      options:
+        - Front (site web)
+        - API
+        - Application mobile
+        - Base de données
+        - Infrastructure / déploiement
+
+  - type: textarea
+    id: contexte
+    attributes:
+      label: Contexte additionnel
+      description: |
+        Navigateur, système, capture d'écran, extrait de journal.
+
+        **Ne collez aucune donnée personnelle réelle** ni aucun jeton de session.
