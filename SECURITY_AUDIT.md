@@ -6,10 +6,14 @@
 > d'un test de non-régression. Le détail de chaque correction figure sous le
 > constat concerné.
 >
-> **Restent ouverts :** F-4 à F-6 (fonctionnalités RGPD à construire), la
-> décision produit sur le rôle `moderator` (F-3), le durcissement de la CSP par
-> nonce, le stockage du jeton sur la cible mobile-web (M-6), et tout le volet
-> infrastructure — **à commencer par le caractère public du bucket S3**.
+> **Mise à jour du 15 août 2026 —** F-4, F-5 et F-6 sont désormais corrigés :
+> suppression de compte par anonymisation, export des données, purge de
+> rétention du journal et pages légales. Le détail figure sous chaque constat.
+>
+> **Restent ouverts :** la décision produit sur le rôle `moderator` (F-3), le
+> durcissement de la CSP par nonce, le stockage du jeton sur la cible
+> mobile-web (M-6), et tout le volet infrastructure — **à commencer par le
+> caractère public du bucket S3**.
 
 **Date :** 15 août 2026
 **Périmètre :** application Next.js 16 (`app/`, `lib/`, `db/`), API REST `/api/v1`, Server Actions, application mobile Expo (`mobile/`), configuration d'infrastructure applicative.
@@ -131,6 +135,10 @@ L'upload isole pourtant correctement les utilisateurs (`app/api/upload/route.ts:
 **Exploitation :** les clés S3 des victimes sont **publiquement lisibles** — ce sont les `imageUrl` affichées sur chaque ressource publiée du catalogue. Un attaquant crée une ressource avec `imageUrl` pointant sur l'objet d'une victime, puis supprime sa propre ressource : l'objet de la victime est détruit. Le procédé est scriptable sur l'ensemble du catalogue → **destruction de toutes les images du site**. La variante via `attachments[]` dans `updateResource` permet la même chose sans même supprimer la ressource.
 
 **Correction :** dans `getObjectKeyFromUrl`, exiger que la clé extraite commence par l'identifiant du propriétaire de la ressource, et refuser toute clé contenant `..` ou `/` en tête. Idéalement, ne jamais stocker d'URL fournie par le client : stocker la clé S3 renvoyée par la route d'upload et reconstruire l'URL à l'affichage.
+
+> **Note (15 août 2026) — `getStoredObjectKey`.** L'anonymisation RGPD (F-4) réattribue les ressources publiées au compte réceptacle, alors que leurs clés conservent le préfixe du propriétaire d'origine : `getObjectKeyFromUrl(url, nouvelAuteur)` ne les reconnaîtrait plus, et une suppression admin ultérieure laisserait les objets orphelins dans le bucket.
+>
+> `lib/s3.ts` expose donc `getStoredObjectKey(url)`, sans contrôle de propriétaire. **Cela ne rouvre pas C-4** : la fonction ne s'applique qu'à des URL relues depuis la base, lesquelles ont déjà franchi `assertOwnedObjectUrl` à l'écriture — la barrière posée par la correction de C-4 est en amont, au moment où l'URL devient une donnée. La faille venait de la confiance accordée à une URL *entrante* ; il ne faut jamais appeler `getStoredObjectKey` sur une valeur issue directement d'une requête. Les durcissements sur `..` et le `/` en tête sont conservés.
 
 ---
 
@@ -303,11 +311,23 @@ Valeur relue en mémoire puis réécrite : les incréments concurrents s'écrase
 
 **F-3 — Rôle `moderator` non fonctionnel.** L'enum le définit, mais `requireApiAdmin` et `requireAdmin` n'acceptent que `admin` et `super_admin` : un modérateur n'a accès à aucun outil de modération. Écart fonctionnel, à clarifier — un rôle inutilisé qui semble accorder des droits est une source d'erreur d'exploitation.
 
-**F-4 — Absence de suppression de compte (droit à l'effacement, art. 17 RGPD).** Aucun point d'entrée ne permet à un utilisateur de supprimer son compte et ses données. `toggleUserActive` est une désactivation, pas un effacement.
+**F-4 — Absence de suppression de compte (droit à l'effacement, art. 17 RGPD).** ✅ *corrigé* — Aucun point d'entrée ne permettait à un utilisateur de supprimer son compte et ses données ; `toggleUserActive` est une désactivation, pas un effacement.
 
-**F-5 — Aucune politique de rétention.** `auth_log` conserve adresses IP et user-agents sans durée de conservation définie ni purge automatique. Les adresses IP sont des données personnelles : fixer une durée (usuellement 6 à 12 mois) et automatiser la purge.
+> **Correction.** `deleteUserAccount` (`lib/rgpd.ts`), exposée par la Server Action `deleteMyAccount` depuis le profil. Le mot de passe est revérifié avant l'opération : un cookie de session volé ne suffit pas à effacer un compte.
+>
+> Toutes les clés étrangères vers `user` étant en `ON DELETE cascade`, un `DELETE` brut aurait aussi détruit les ressources publiées et les commentaires visibles — donc les fils de discussion d'autres citoyens. Les contenus publics sont donc réattribués au compte réceptacle « Utilisateur supprimé » (inactif, sans ligne `account`, donc non connectable), tout le reste étant détruit : identité, brouillons et leurs fichiers dans le bucket, favoris, progression, signalements, sessions et jetons. L'article 17 §1 porte sur les données à caractère personnel ; une contribution détachée de toute identité n'en est plus une.
 
-**F-6 — Absence de portabilité et d'information.** Aucun export des données personnelles (art. 20), aucune politique de confidentialité ni mention de traitement dans le parcours d'inscription.
+**F-5 — Aucune politique de rétention.** ✅ *corrigé* — `auth_log` conservait adresses IP et user-agents sans durée définie ni purge.
+
+> **Correction.** `purgeAuthLog` (`lib/rgpd.ts`), 180 jours par défaut (recommandation CNIL sur les journaux de connexion), surchargeable par `AUTH_LOG_RETENTION_DAYS`. Déclenchable par `POST /api/v1/maintenance/purge-auth-log` (secret partagé `CRON_SECRET`, comparaison à temps constant) ou par `bun run db:purge`. L'ordonnancement est décrit dans `docs/PLAN_DEPLOIEMENT.md`. Index ajouté sur `auth_log.created_at`.
+>
+> L'effacement d'un compte met par ailleurs `auth_log.user_id` à `NULL` : la table n'a délibérément pas de clé étrangère vers `user`, donc rien ne nettoyait cet identifiant, encore personnel dès lors qu'il est recoupable.
+
+**F-6 — Absence de portabilité et d'information.** ✅ *corrigé* — Aucun export des données personnelles (art. 20), aucune politique de confidentialité ni mention de traitement à l'inscription.
+
+> **Correction.** `exportUserData` (`lib/rgpd.ts`) via la Server Action `exportMyData`, export JSON téléchargeable depuis le profil. Les quatre pages légales référencées par le pied de page — qui renvoyaient toutes un **404** — sont créées : mentions légales, politique de confidentialité, déclaration d'accessibilité RGAA et contact. Mention d'information ajoutée au parcours d'inscription (art. 13).
+>
+> Les durées annoncées dans la politique de confidentialité sont alignées sur ce que le code applique réellement, et un test le vérifie (`tests/unit/pages/legal-pages.test.tsx`) : une politique qui promet autre chose que le comportement du système est un manquement en soi.
 
 ---
 

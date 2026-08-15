@@ -15,7 +15,11 @@ export type AuditEvent =
   | "report.resolved"
   | "category.created"
   | "category.updated"
-  | "category.deleted";
+  | "category.deleted"
+  // Exercice des droits RGPD par le citoyen lui-même, et maintenance associée.
+  | "user.self_deleted"
+  | "user.data_exported"
+  | "authlog.purged";
 
 /**
  * Trace une action d'administration dans `auth_log`.
@@ -42,5 +46,27 @@ export async function logAdminAction(params: {
     });
   } catch (err) {
     console.error("[audit_log] échec de journalisation de l'action d'administration", err);
+  }
+}
+
+/**
+ * Trace un événement de maintenance sans cible unique (purge de rétention).
+ *
+ * `logAdminAction` exige `targetType`/`targetId` : une purge portant sur des
+ * milliers de lignes n'en a pas. Les colonnes restent donc nulles, et le volume
+ * traité passe par `metadata`.
+ */
+export async function logMaintenanceEvent(params: {
+  event: Extract<AuditEvent, "authlog.purged">;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await db.insert(authLog).values({
+      id: crypto.randomUUID(),
+      event: params.event,
+      metadata: params.metadata ? JSON.stringify(params.metadata) : null,
+    });
+  } catch (err) {
+    console.error("[audit_log] échec de journalisation de l'événement de maintenance", err);
   }
 }

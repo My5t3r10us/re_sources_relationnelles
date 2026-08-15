@@ -4,6 +4,7 @@ import { authClient } from "@/lib/auth-client";
 import { User, Mail, Shield, Calendar, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { TwoFactorSection } from "./two-factor-section";
+import { RgpdSection } from "./rgpd-section";
 
 export default function ProfilPage() {
   const { data: session, isPending } = authClient.useSession();
@@ -101,6 +102,8 @@ export default function ProfilPage() {
               .twoFactorEnabled ?? false
           }
         />
+
+        <RgpdSection />
       </div>
     </main>
   );

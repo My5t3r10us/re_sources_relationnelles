@@ -1,0 +1,72 @@
+name: "Demande d'évolution"
+description: "Proposer une nouvelle fonctionnalité ou une amélioration."
+title: "[Évolution] "
+labels: ["feature", "triage"]
+body:
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Besoin
+      description: |
+        Le besoin, pas la solution. Quel problème d'usage cette évolution
+        résout-elle, et pour qui ?
+      placeholder: |
+        En tant que citoyen connecté, je souhaite… afin de…
+    validations:
+      required: true
+
+  - type: dropdown
+    id: acteur
+    attributes:
+      label: Acteur concerné
+      multiple: true
+      options:
+        - Citoyen non connecté
+        - Citoyen connecté
+        - Modérateur
+        - Administrateur du catalogue
+        - Super-administrateur
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution envisagée
+      description: Facultatif — laissez vide si vous n'avez pas d'idée arrêtée.
+
+  - type: textarea
+    id: acceptation
+    attributes:
+      label: Critères d'acceptation
+      description: |
+        À quoi saura-t-on que c'est terminé ? Une issue ne passe pas en « Prêt »
+        sans critères explicites.
+      placeholder: |
+        - [ ] …
+        - [ ] …
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: impacts
+    attributes:
+      label: Impacts à instruire
+      options:
+        - label: "Traite des données personnelles (analyse RGPD requise)"
+        - label: "Modifie le schéma de base (migration requise)"
+        - label: "Modifie le contrat de l'API `/api/v1` (impact application mobile)"
+        - label: "Touche à l'authentification ou aux autorisations"
+        - label: "Nécessite une évolution de l'application mobile"
+
+  - type: dropdown
+    id: priorite
+    attributes:
+      label: Priorité proposée
+      description: Elle sera confirmée au triage.
+      options:
+        - "P1 — Haute"
+        - "P2 — Normale"
+        - "P3 — Basse"
+    validations:
+      required: true

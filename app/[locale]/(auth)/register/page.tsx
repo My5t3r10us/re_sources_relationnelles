@@ -159,6 +159,31 @@ export default function RegisterPage() {
             />
           </div>
 
+          {/*
+            Information préalable au traitement (art. 13 RGPD) : la personne
+            doit savoir ce qu'il advient de ses données au moment où elle les
+            confie, pas seulement en cherchant dans le pied de page.
+          */}
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            En créant un compte, vous acceptez les{" "}
+            <Link
+              href="/mentions-legales"
+              className="font-medium text-primary hover:underline"
+            >
+              mentions légales
+            </Link>{" "}
+            et confirmez avoir pris connaissance de notre{" "}
+            <Link
+              href="/confidentialite"
+              className="font-medium text-primary hover:underline"
+            >
+              politique de confidentialité
+            </Link>
+            . Vos données servent uniquement à fournir le service ; vous pouvez
+            les exporter ou supprimer votre compte à tout moment depuis votre
+            profil.
+          </p>
+
           <button
             type="submit"
             disabled={loading}

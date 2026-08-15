@@ -1,0 +1,43 @@
+# Responsables de revue.
+#
+# GitHub sollicite automatiquement le propriétaire des fichiers touchés par une
+# pull request. Combiné à la protection de `master` (une revue approuvée
+# obligatoire), c'est ce qui garantit qu'aucune modification sensible ne passe
+# sans regard extérieur.
+#
+# La dernière règle correspondante l'emporte : les chemins sensibles sont donc
+# listés APRÈS la règle générale.
+
+# Défaut
+*                               @My5t3r10us
+
+# ─── Chemins sensibles ──────────────────────────────────────────────────────
+# Authentification, autorisations et validation : trois des quatre
+# vulnérabilités critiques de l'audit provenaient de ces fichiers.
+/lib/auth.ts                    @My5t3r10us
+/lib/auth-server.ts             @My5t3r10us
+/lib/api-auth.ts                @My5t3r10us
+/lib/authz.ts                   @My5t3r10us
+/lib/session-user.ts            @My5t3r10us
+/lib/validation.ts              @My5t3r10us
+/lib/rgpd.ts                    @My5t3r10us
+/lib/s3.ts                      @My5t3r10us
+
+# Schéma et migrations : une migration destructive est irréversible en production.
+/db/schema.ts                   @My5t3r10us
+/db/migrate.ts                  @My5t3r10us
+/db/baseline.ts                 @My5t3r10us
+/migrations/                    @My5t3r10us
+
+# Déploiement et en-têtes de sécurité.
+/.github/workflows/             @My5t3r10us
+/railpack.json                  @My5t3r10us
+/next.config.ts                 @My5t3r10us
+/proxy.ts                       @My5t3r10us
+
+# Documents contractuels et pages légales : leur contenu engage le prestataire.
+/docs/                          @My5t3r10us
+/SECURITY_AUDIT.md              @My5t3r10us
+/app/[locale]/(public)/mentions-legales/      @My5t3r10us
+/app/[locale]/(public)/confidentialite/       @My5t3r10us
+/app/[locale]/(public)/accessibilite/         @My5t3r10us
