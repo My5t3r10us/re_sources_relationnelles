@@ -1,5 +1,16 @@
 # Audit de sécurité — (RE)Sources Relationnelles
 
+> **État au 15 août 2026 — corrections appliquées.**
+> Les 4 constats critiques, les 5 élevés, les 8 moyens et F-1 à F-3 ont été
+> corrigés (branche `claude/security-audit-project-efk7gl`), chacun accompagné
+> d'un test de non-régression. Le détail de chaque correction figure sous le
+> constat concerné.
+>
+> **Restent ouverts :** F-4 à F-6 (fonctionnalités RGPD à construire), la
+> décision produit sur le rôle `moderator` (F-3), le durcissement de la CSP par
+> nonce, le stockage du jeton sur la cible mobile-web (M-6), et tout le volet
+> infrastructure — **à commencer par le caractère public du bucket S3**.
+
 **Date :** 15 août 2026
 **Périmètre :** application Next.js 16 (`app/`, `lib/`, `db/`), API REST `/api/v1`, Server Actions, application mobile Expo (`mobile/`), configuration d'infrastructure applicative.
 **Méthode :** revue manuelle de code (white-box) de l'intégralité des points d'entrée : 38 routes API, 5 fichiers de Server Actions, les layouts et pages à contrôle d'accès, la couche d'authentification, le stockage S3 et le client mobile. Pas de test d'intrusion dynamique (aucun environnement déployé disponible).
@@ -25,7 +36,7 @@ Le problème central n'est pas la cryptographie ni l'injection : c'est **l'exist
 
 ## 🔴 Critiques
 
-### C-1 — Escalade de privilèges : tout administrateur peut devenir super-administrateur
+### C-1 — Escalade de privilèges : tout administrateur peut devenir super-administrateur  ✅ *corrigé*
 
 **Fichier :** `app/[locale]/(admin)/admin/actions.ts:59-68`
 
@@ -53,7 +64,7 @@ if (!ASSIGNABLE_BY_ADMIN.includes(role)) throw new Error("Rôle invalide");
 
 ---
 
-### C-2 — Un administrateur peut rétrograder et désactiver le super-administrateur
+### C-2 — Un administrateur peut rétrograder et désactiver le super-administrateur  ✅ *corrigé*
 
 **Fichiers :** `app/[locale]/(admin)/admin/actions.ts:59, 71-87` · `app/api/v1/admin/users/[id]/role/route.ts:10-33` · `app/api/v1/admin/users/[id]/active/route.ts:10-18`
 
@@ -78,7 +89,7 @@ if (superAdminRoles.includes(role)) {
 
 ---
 
-### C-3 — La désactivation d'un compte n'a aucun effet sur le site web
+### C-3 — La désactivation d'un compte n'a aucun effet sur le site web  ✅ *corrigé*
 
 **Fichiers :** `lib/auth-server.ts:4-9` (vs. `lib/api-auth.ts:25`)
 
@@ -103,7 +114,7 @@ export async function getServerSession() {
 
 ---
 
-### C-4 — Suppression arbitraire de fichiers dans le bucket S3
+### C-4 — Suppression arbitraire de fichiers dans le bucket S3  ✅ *corrigé*
 
 **Fichiers :** `lib/s3.ts:30-41` · `app/api/v1/resources/[id]/route.ts:196-211` · `app/[locale]/(public)/publier/publish-actions.ts:150-160` · `app/[locale]/(admin)/admin/actions.ts:129-142`
 
@@ -125,7 +136,7 @@ L'upload isole pourtant correctement les utilisateurs (`app/api/upload/route.ts:
 
 ## 🟠 Élevés
 
-### E-1 — Le contenu non publié est lisible publiquement sur le web
+### E-1 — Le contenu non publié est lisible publiquement sur le web  ✅ *corrigé*
 
 **Fichier :** `app/[locale]/(public)/ressource/[id]/page.tsx:79-86`
 
@@ -146,7 +157,7 @@ L'API équivalente est correcte (`app/api/v1/resources/[id]/route.ts:56-58` bloq
 
 ---
 
-### E-2 — Commentaires : aucune vérification de la ressource cible
+### E-2 — Commentaires : aucune vérification de la ressource cible  ✅ *corrigé*
 
 **Fichiers :** `app/api/v1/resources/[id]/comments/route.ts:10-27, 30-45` · `app/[locale]/(public)/ressource/[id]/comment-actions.ts:16-35`
 
@@ -160,7 +171,7 @@ Ni la lecture ni l'écriture ne vérifient que la ressource existe, est publiée
 
 ---
 
-### E-3 — Aucune limitation de débit sur l'ensemble de l'application
+### E-3 — Aucune limitation de débit sur l'ensemble de l'application  ✅ *corrigé*
 
 Aucun `rateLimit` n'est configuré dans `lib/auth.ts`, et **aucune des 38 routes `/api/v1` ni aucune Server Action** n'implémente de limitation. Surfaces exposées :
 
@@ -178,7 +189,7 @@ better-auth applique des protections par défaut sur `/api/auth/*` en production
 
 ---
 
-### E-4 — Proxy d'images ouvert (SSRF)
+### E-4 — Proxy d'images ouvert (SSRF)  ✅ *corrigé*
 
 **Fichier :** `next.config.ts:7-10`
 
@@ -201,7 +212,7 @@ remotePatterns: [{ protocol: "https", hostname: "t3.storage.dev" }]
 
 ---
 
-### E-5 — Aucun en-tête de sécurité HTTP
+### E-5 — Aucun en-tête de sécurité HTTP  ✅ *corrigé (CSP à durcir par nonce)*
 
 `next.config.ts` ne définit aucun `headers()`. Sont absents :
 
@@ -219,7 +230,7 @@ remotePatterns: [{ protocol: "https", hostname: "t3.storage.dev" }]
 
 ## 🟡 Moyens
 
-### M-1 — Absence de validation des entrées sur l'ensemble des points d'entrée
+### M-1 — Absence de validation des entrées sur l'ensemble des points d'entrée  ✅ *corrigé*
 
 Aucune bibliothèque de validation de schéma (Zod, Valibot) n'est présente. Les corps de requête sont déstructurés directement, et les valeurs invalides sont forcées via `as never` :
 
@@ -234,7 +245,7 @@ Conséquences : erreurs 500 non maîtrisées, `content` sans limite de taille (i
 
 **Correction :** un schéma Zod par point d'entrée — routes API **et** Server Actions —, appliqué avant toute écriture.
 
-### M-2 — Codes de session collaborative prédictibles
+### M-2 — Codes de session collaborative prédictibles  ✅ *corrigé*
 
 **Fichier :** `lib/sessions.ts:10`
 
@@ -246,7 +257,7 @@ code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
 
 **Correction :** `crypto.getRandomValues()` (ou `crypto.randomInt`) sur le même alphabet.
 
-### M-3 — Upload : type MIME déclaré par le client, jamais vérifié
+### M-3 — Upload : type MIME déclaré par le client, jamais vérifié  ✅ *corrigé*
 
 **Fichier :** `app/api/upload/route.ts:38-58`
 
@@ -254,7 +265,7 @@ Le `contentType` provient de `file.type`, valeur entièrement contrôlée par le
 
 **Correction :** vérifier les magic bytes et dériver le `ContentType` du résultat, jamais de la déclaration client. Ajouter `nosniff` côté bucket.
 
-### M-4 — Compteur de vues : lecture-modification-écriture concurrente
+### M-4 — Compteur de vues : lecture-modification-écriture concurrente  ✅ *corrigé*
 
 **Fichiers :** `app/api/v1/resources/[id]/route.ts:88` · `app/[locale]/(public)/ressource/[id]/page.tsx:89-92`
 
@@ -266,19 +277,19 @@ Valeur relue en mémoire puis réécrite : les incréments concurrents s'écrase
 
 **Correction :** incrément atomique côté SQL — `set({ viewCount: sql\`${resource.viewCount} + 1\` })` — comme cela est déjà correctement fait pour les likes.
 
-### M-5 — `trustedOrigins` avec joker
+### M-5 — `trustedOrigins` avec joker  ✅ *corrigé*
 
 **Fichier :** `lib/auth.ts:29-30` — `"exp://*"` et `"re-sources://"`. Le joker élargit les origines acceptées au-delà du nécessaire. Acceptable en développement, à restreindre en production via une configuration dépendante de `NODE_ENV`.
 
-### M-6 — Jetons stockés en `localStorage` sur mobile-web
+### M-6 — Jetons stockés en `localStorage` sur mobile-web  ⏳ *documenté, non corrigé*
 
 **Fichier :** `mobile/lib/storage.ts:14-21`. `expo-secure-store` est correctement utilisé sur iOS/Android, mais le repli web écrit le jeton en `localStorage`, accessible à tout script de la page. Sur la cible web d'Expo, une XSS permettrait l'exfiltration du jeton. Préférer un cookie `httpOnly` sur cette cible.
 
-### M-7 — Aucune journalisation des actions d'administration
+### M-7 — Aucune journalisation des actions d'administration  ✅ *corrigé*
 
 `lib/auth.ts:44-60` journalise les connexions dans `auth_log`, mais **aucune action de modération ou de gestion de comptes n'est tracée** : changement de rôle, désactivation, suppression de ressource ou de commentaire, résolution de signalement. En cas d'incident (par exemple l'exploitation de C-1 ou C-2), il n'existe aucune piste d'audit. La page `/admin/journal` n'affiche donc que les connexions.
 
-### M-8 — Authentification vérifiée après le parsing du corps
+### M-8 — Authentification vérifiée après le parsing du corps  ✅ *corrigé*
 
 `app/api/v1/admin/users/[id]/role/route.ts:12-24` : `req.json()` est exécuté et la validation du rôle est effectuée **avant** tout contrôle d'authentification. Un appelant anonyme obtient un 400 discriminant, ce qui expose la sémantique de l'endpoint. Vérifier l'identité en premier, systématiquement.
 
@@ -339,6 +350,22 @@ Ces éléments ont été explicitement vérifiés et ne présentent pas de défa
 12. M-7 : journalisation des actions d'administration dans `auth_log`
 13. M-3, M-4, M-5, M-6 : vérification des magic bytes, incréments atomiques, restriction des origines, stockage du jeton mobile-web
 14. F-4 à F-6 : suppression de compte, export des données, politique de rétention de `auth_log`
+
+### Ce qui a été livré
+
+Cinq commits sur `claude/security-audit-project-efk7gl`, un par phase :
+
+| Commit | Contenu |
+|---|---|
+| Fondations | `lib/session-user.ts` (source de vérité unique de session), `lib/authz.ts`, `lib/validation.ts` (Zod), `lib/rate-limit.ts` + table `rate_limit` |
+| Critiques | C-1, C-2, C-3, C-4 |
+| Élevés | E-1 à E-5 (+ M-3, M-4) |
+| Moyens / faibles | M-2, M-5, M-7, M-8, F-1, F-2, F-3 |
+| Tests | un test de non-régression par faille corrigée |
+
+**Vérifications :** 579 tests au vert sur 580 — le seul échec (`login > submits form and calls signIn`) est antérieur à ces travaux et sans rapport ; build de production réussi ; en-têtes de sécurité constatés sur les réponses ; proxy d'images vérifié fermé (hôte arbitraire et `169.254.169.254` → 400).
+
+**Deux migrations à appliquer :** `0011` (table `rate_limit`) et `0012` (colonnes d'audit sur `auth_log`).
 
 **Recommandation structurelle.** Les vulnérabilités C-1 et C-3 partagent une même cause : la confiance accordée à des garanties qui n'existent qu'à la compilation, et l'existence de deux chemins d'autorisation dont un seul est complet. Unifier `lib/auth-server.ts` et `lib/api-auth.ts` en une fonction unique, et valider tout point d'entrée par un schéma à l'exécution, supprimerait ces deux classes de défauts de façon durable plutôt que cas par cas.
 
