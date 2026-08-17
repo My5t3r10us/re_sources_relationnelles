@@ -54,7 +54,7 @@ Quatre environnements, du poste du développeur à la production.
 | | **Développement** | **Test (CI)** | **Préproduction** | **Production** |
 |---|---|---|---|---|
 | **Rôle** | Développer une fonctionnalité | Valider chaque commit | Recette métier, répétition de la mise en production | Service rendu aux citoyens |
-| **Déclencheur** | Manuel (`bun run dev`) | Push et pull request | Fusion sur `develop` | Fusion sur `master` |
+| **Déclencheur** | Manuel (`bun run dev`) | Push et pull request sur `dev`/`staging` | Fusion sur `staging` | Fusion sur `master` |
 | **Hébergement** | Poste du développeur | Runner GitHub Actions éphémère | Dokploy — application dédiée | Dokploy — application dédiée |
 | **Base** | Postgres local | Postgres 17 en service conteneurisé, détruit à la fin du job | Postgres dédié, jeu de données anonymisé | Postgres dédié, sauvegardé |
 | **Bucket** | Bucket de développement | Aucun (client S3 simulé) | Bucket de préproduction | Bucket de production, **privé** |
@@ -114,13 +114,13 @@ Le détail et la justification du choix figurent dans
 Ce qui concerne directement le déploiement :
 
 - **Git + GitHub**, dépôt unique (web, API et application mobile).
-- **GitHub Flow** : `master` est déployable en permanence ; `develop` alimente
-  la préproduction ; toute évolution passe par une branche `feat/` ou `fix/`
-  puis une pull request.
+- **Flux de promotion** : les branches de travail alimentent `dev`, `dev`
+  alimente `staging`, puis `staging` alimente `master`.
 - **SemVer** (`MAJEUR.MINEUR.CORRECTIF`) avec un tag annoté par mise en
   production. Le tag est **le point de retour arrière** : c'est lui qui rend
   la procédure du §9 exécutable.
-- **`master` protégée** : pas de push direct, CI verte et une revue obligatoires.
+- **Branches protégées** : pas de push direct ; `staging` accepte uniquement
+  `dev`, et `master` uniquement `staging`.
 - La version est exposée par `GET /api/health`, ce qui permet de vérifier après
   coup *quelle* version est réellement en ligne.
 
@@ -130,13 +130,13 @@ Ce qui concerne directement le déploiement :
 
 ### Chaîne d'intégration et de déploiement
 
-Définie dans `.github/workflows/ci.yml`, déclenchée à chaque push et pull
-request sur `master`.
+La CI est définie dans `.github/workflows/ci.yml` et déclenchée à chaque push
+et pull request sur `dev` et `staging`. Elle ne s'exécute jamais sur `master`.
 
 ```
                     ┌── lint ────────┐
                     ├── typecheck ───┤
-   push / PR ───────┼── build ───────┼──► deploy (master uniquement)
+ dev / staging ─────┼── build ───────┼──► deploy (staging → préproduction)
                     ├── test ────────┤         │
                     └── e2e ─────────┘         ▼
                                         webhook Dokploy
@@ -149,12 +149,16 @@ request sur `master`.
                                                │
                                                ▼
                                     GET /api/health → 200
+
+ staging ──► master ──► deploy-production.yml ──► production
+                         (aucune CI relancée)
 ```
 
 Les cinq jobs de contrôle s'exécutent **en parallèle** : un retour rapide
-encourage les petits incréments. Le job `deploy` porte
-`needs: [lint, typecheck, build, test, e2e]` — un seul échec suffit à bloquer
-la mise en production.
+encourage les petits incréments. Le job `deploy-preproduction` porte
+`needs: [lint, typecheck, build, test, e2e]` — un seul échec bloque la
+préproduction. La production reçoit ensuite exactement le commit recetté sur
+`staging`, sans relancer ces contrôles.
 
 ### Application des migrations
 
@@ -258,7 +262,7 @@ confidentialité correspond à celle que le code applique.
 
 | Sévérité | Définition | Prise en charge | Correction visée | Circuit |
 |---|---|---|---|---|
-| **S1 — Critique** | Service indisponible, fuite de données, faille exploitée | 1 h ouvrée | 4 h | Branche `hotfix/` depuis le tag de production, CI complète, mise en production immédiate, puis report sur `develop` |
+| **S1 — Critique** | Service indisponible, fuite de données, faille exploitée | 1 h ouvrée | 4 h | Branche `hotfix/` vers `dev`, CI complète, promotion accélérée par `staging`, puis `master` |
 | **S2 — Majeure** | Fonction essentielle inutilisable, sans contournement | 4 h ouvrées | 2 jours ouvrés | Circuit normal, priorité haute |
 | **S3 — Mineure** | Gêne avec contournement | 2 jours ouvrés | Itération suivante | Circuit normal |
 | **S4 — Cosmétique** | Défaut d'affichage ou de libellé | — | Selon disponibilité | Regroupée |
@@ -371,12 +375,12 @@ Rôles : **DEV** développeur · **LEAD** lead technique · **OPS** DevOps ·
 | 7 | `test` (unitaires + API) | — | Vitest + Postgres 17 | 5 min | **Oui** |
 | 8 | `e2e` | — | Playwright | 6 min | **Oui** |
 | 9 | Revue de code | LEAD | GitHub | 30 min | Non |
-| 10 | Fusion vers `develop` | LEAD | GitHub | 2 min | Non |
-| 11 | Déploiement en préproduction | — | Dokploy | 5 min | **Oui** |
+| 10 | Fusion vers `dev` | LEAD | GitHub | 2 min | Non |
+| 11 | Promotion vers `staging` et déploiement en préproduction | — | GitHub Actions + Dokploy | 5 min | **Oui** |
 | 12 | Recette métier | PO | Navigateur | 1 h | Non |
 | 13 | Fusion vers `master` | LEAD | GitHub | 2 min | Non |
 | 14 | Tag SemVer + CHANGELOG | LEAD | Git | 10 min | Non |
-| 15 | Webhook Dokploy | — | GitHub Actions | 10 s | **Oui** |
+| 15 | Webhook Dokploy de production, sans nouvelle CI | — | GitHub Actions | 10 s | **Oui** |
 | 16 | Build Railpack | — | Railpack | 3 min | **Oui** |
 | 17 | Migration du schéma | — | `db/migrate.ts` | 10 s | **Oui** |
 | 18 | Démarrage | — | `next start` | 20 s | **Oui** |
@@ -393,11 +397,11 @@ revue et la recette — les deux étapes humaines qu'il ne faut pas comprimer.
 | 1 | Détection (alerte ou signalement) | OPS | T |
 | 2 | Qualification, décision de retour arrière | LEAD | T + 15 min |
 | 3 | *Si retour arrière* : redéploiement du tag précédent | OPS | T + 30 min |
-| 4 | *Sinon* : branche `hotfix/` depuis le tag de production | DEV | T + 30 min |
+| 4 | *Sinon* : branche `hotfix/` depuis `dev` | DEV | T + 30 min |
 | 5 | Correction et test de non-régression | DEV | T + 2 h |
 | 6 | CI complète et revue accélérée | LEAD | T + 2 h 30 |
 | 7 | Mise en production et vérification | OPS | T + 3 h |
-| 8 | Report sur `develop`, *post mortem* | LEAD | T + 1 jour |
+| 8 | Promotion `dev` → `staging` → `master`, *post mortem* | LEAD | T + 1 jour |
 | 9 | *Si données personnelles* : notification CNIL | DPO | **T + 72 h maximum** |
 
 ### Mise en service initiale

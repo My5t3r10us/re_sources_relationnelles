@@ -62,19 +62,26 @@ bun run db:test:push
 
 ## Branches
 
+| Branche permanente | Rôle | Alimentation autorisée |
+|---|---|---|
+| `dev` | Intégration des développements, branche par défaut | Branches de travail |
+| `staging` | Préproduction et recette métier | `dev` uniquement |
+| `master` | Production | `staging` uniquement |
+
 | Préfixe | Origine | Usage |
 |---|---|---|
-| `feat/` | `develop` | Nouvelle fonctionnalité |
-| `fix/` | `develop` | Correction non urgente |
-| `hotfix/` | **`master`** | Correction critique en production |
-| `docs/` | `develop` | Documentation seule |
+| `feat/` | `dev` | Nouvelle fonctionnalité |
+| `fix/` | `dev` | Correction non urgente |
+| `hotfix/` | `dev` | Correction critique prioritaire |
+| `docs/` | `dev` | Documentation seule |
 
-`master` est protégée : pas de push direct, CI verte et une revue approuvée
-obligatoires.
+Les branches permanentes sont protégées et les promotions passent par pull
+request. La CI complète s'exécute sur `dev` et `staging`. `master` ne relance
+pas ces contrôles : elle accepte uniquement une PR provenant de `staging`, déjà
+validée et recettée.
 
-> Un `hotfix/` part de `master`, jamais de `develop` : un correctif urgent ne
-> doit embarquer que la correction, pas les évolutions en cours d'intégration.
-> Le report sur `develop` après mise en production est obligatoire.
+> Même urgent, un correctif suit `hotfix/` → `dev` → `staging` → `master`.
+> L'urgence raccourcit la recette et la revue, jamais le chemin de promotion.
 
 Une branche de plus de deux semaines signale un lot trop gros : découpez-le.
 
@@ -109,11 +116,13 @@ closes #42
 
 ## Pull requests
 
-1. Branche à jour sur `develop`.
+1. Branche à jour sur `dev`.
 2. `bun run lint`, `bun run typecheck` et `bun run test` au vert **en local**.
 3. Modèle de pull request rempli.
 4. Lien vers l'issue (`closes #n`).
 5. Une revue approuvée minimum.
+6. Une promotion vers `staging` provient de `dev` ; une promotion vers
+   `master` provient de `staging`.
 
 ### Grille de revue
 

@@ -156,9 +156,18 @@ npx maestro test .maestro/flows
 
 ## CI/CD
 
-Le workflow `.github/workflows/ci.yml` exécute le lint, la vérification TypeScript, la compilation, les tests avec couverture et les parcours Playwright. Après leur réussite, un push sur `master` déclenche le déploiement Dokploy.
+Le flux de promotion est `dev` → `staging` → `master`. Le workflow
+`.github/workflows/ci.yml` exécute le lint, la vérification TypeScript, la
+compilation, les tests avec couverture et les parcours Playwright sur `dev` et
+`staging`. Une validation réussie de `staging` déclenche le déploiement Dokploy
+de préproduction. `master` ne relance pas la CI : son workflow dédié déclenche
+uniquement le déploiement de production.
 
-Un second workflow, `.github/workflows/audit-dependances.yml`, analyse tous les deux jours les dépendances web avec Bun et mobiles avec npm. Les vulnérabilités de sévérité modérée ou supérieure sont regroupées dans une issue GitHub dédiée et le rapport reste disponible comme artefact du run.
+Le workflow `.github/workflows/audit-dependances.yml` analyse tous les deux
+jours les dépendances web avec Bun et mobiles avec npm, en récupérant toujours
+le contenu de `master`. Les vulnérabilités de sévérité modérée ou supérieure
+sont regroupées dans une issue GitHub dédiée et le rapport reste disponible
+comme artefact du run.
 
 ## Sécurité et RGPD
 

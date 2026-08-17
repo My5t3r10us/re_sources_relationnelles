@@ -9,9 +9,9 @@ body:
         **Ouvrez cette issue immédiatement, sans attendre la résolution** : elle
         sert de main courante horodatée de l'incident.
 
-        Rappel du circuit : qualification → confinement → correction depuis une
-        branche `hotfix/` partant de `master` → mise en production → report sur
-        `develop` → *post mortem*.
+        Rappel du circuit : qualification → confinement → correction sur une
+        branche `hotfix/` vers `dev` → promotion accélérée par `staging` puis
+        `master` → mise en production → *post mortem*.
 
   - type: textarea
     id: constat

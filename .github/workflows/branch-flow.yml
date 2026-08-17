@@ -1,0 +1,40 @@
+name: Flux des branches
+
+on:
+  pull_request:
+    branches: [staging, master]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-source:
+    name: Vérifier la branche source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Contrôler le chemin de promotion
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        shell: bash
+        run: |
+          case "$BASE_BRANCH" in
+            staging)
+              expected="dev"
+              ;;
+            master)
+              expected="staging"
+              ;;
+            *)
+              echo "::error::Branche cible non prise en charge : $BASE_BRANCH"
+              exit 1
+              ;;
+          esac
+
+          if [ "$HEAD_BRANCH" != "$expected" ]; then
+            echo "::error::Une pull request vers $BASE_BRANCH doit provenir de $expected, pas de $HEAD_BRANCH."
+            exit 1
+          fi
+
+          echo "Promotion autorisée : $HEAD_BRANCH → $BASE_BRANCH."

@@ -70,7 +70,7 @@ l'infrastructure Dokploy située dans l'UE.
 |---|---|
 | Dépôt | `My5t3r10us/re_sources_relationnelles` — web, API et mobile |
 | Branche de production | `master`, **protégée** |
-| Protection | Pas de push direct, CI verte obligatoire, ≥ 1 revue approuvée |
+| Protection | Pas de push direct, promotion depuis `staging`, ≥ 1 revue approuvée |
 | Étiquettes de version | Tags annotés `vX.Y.Z` |
 | Journal des évolutions | `CHANGELOG.md` |
 
@@ -78,31 +78,33 @@ l'infrastructure Dokploy située dans l'UE.
 
 ## 2. Stratégie de branches
 
-**GitHub Flow**, avec une branche d'intégration pour alimenter la préproduction.
+Flux de promotion à trois branches permanentes : développement, préproduction
+et production.
 
 ```
-master   ──●────────────●──────────────●────  production (tag vX.Y.Z)
-            \          /              /
-develop   ───●────●───●───●──────────●─────   préproduction
-              \      /     \        /
-feat/…         ●──●─┘       ●──●──●┘          une évolution = une branche
+master   ───────────────●──────────────●────  production
+                       /              /
+staging  ─────────●───●──────────●───●─────  préproduction
+                 /              /
+dev      ───●───●──────●──●────●───────────  intégration
+            \         /    \  /
+feat/…       ●──●────┘      ●┘               une évolution = une branche
 ```
 
 | Branche | Rôle | Origine | Destination |
 |---|---|---|---|
-| `master` | Production, déployable en permanence | — | — |
-| `develop` | Intégration, déployée en préproduction | `master` | `master` |
-| `feat/<sujet>` | Nouvelle fonctionnalité | `develop` | `develop` |
-| `fix/<sujet>` | Correction non urgente | `develop` | `develop` |
-| `hotfix/<sujet>` | **Correction critique** | **`master`** | `master` **et** `develop` |
-| `docs/<sujet>` | Documentation seule | `develop` | `develop` |
+| `master` | Production | `staging` | — |
+| `staging` | Préproduction et recette | `dev` | `master` |
+| `dev` | Intégration des développements | Branches de travail | `staging` |
+| `feat/<sujet>` | Nouvelle fonctionnalité | `dev` | `dev` |
+| `fix/<sujet>` | Correction non urgente | `dev` | `dev` |
+| `hotfix/<sujet>` | Correction critique prioritaire | `dev` | `dev` |
+| `docs/<sujet>` | Documentation seule | `dev` | `dev` |
 
-> **Pourquoi `hotfix/` part de `master` et non de `develop`.** Un correctif
-> urgent ne doit embarquer que la correction, jamais les évolutions en cours
-> d'intégration. Partir de `develop` reviendrait à mettre en production du code
-> non recetté à l'occasion d'un incident — c'est-à-dire à transformer une panne
-> en deux pannes. Le report sur `develop` après coup est obligatoire, faute de
-> quoi la fusion suivante réintroduirait le défaut.
+Le workflow `branch-flow.yml` refuse une promotion vers `staging` qui ne vient
+pas de `dev`, ainsi qu'une promotion vers `master` qui ne vient pas de
+`staging`. Un correctif urgent suit le même chemin, avec une revue et une
+recette accélérées.
 
 Une branche est supprimée après fusion. Une branche de plus de deux semaines est
 un signal : le lot est trop gros et doit être découpé.
@@ -161,21 +163,24 @@ casserait les installations déployées — d'où l'incrément MAJEUR.
 ### Procédure de release
 
 ```bash
-# 1. Depuis master, à jour et CI verte
+# 1. Depuis staging, à jour, CI verte et recette validée
+git checkout staging && git pull origin staging
+
+# 2. La version et le CHANGELOG ont déjà suivi dev → staging
+# 3. Ouvrir puis fusionner la PR staging → master
+
+# 4. Revenir sur le commit de production effectivement fusionné
 git checkout master && git pull origin master
 
-# 2. Version dans package.json + section du CHANGELOG
-# 3. Commit de release
-git commit -am "chore(release): version 1.1.0"
-
-# 4. Tag annoté — c'est LE point de retour arrière
+# 5. Tag annoté — c'est LE point de retour arrière
 git tag -a v1.1.0 -m "Version 1.1.0 — <résumé>"
 
-# 5. Publication
-git push origin master --follow-tags
+# 6. Publier uniquement le tag ; master a déjà été fusionnée par PR
+git push origin v1.1.0
 ```
 
-Le push sur `master` déclenche la chaîne complète puis le déploiement.
+Le push sur `master` déclenche uniquement le déploiement de production. La
+chaîne complète a déjà validé le commit sur `dev` puis `staging`.
 
 > **Le tag n'est pas décoratif.** C'est lui qui rend exécutable la procédure de
 > retour arrière du plan de déploiement : redéployer la version précédente
@@ -299,12 +304,12 @@ Sévérités, délais de prise en charge et de correction : voir
 1. **Ouverture immédiate** d'une issue `incident` + `S1-critique` — même en
    pleine résolution : elle sert de main courante horodatée.
 2. **Décision** : retour arrière sur le tag précédent, ou correctif.
-3. **Branche `hotfix/` depuis `master`**, jamais depuis `develop`.
+3. **Branche `hotfix/` depuis `dev`**, limitée au correctif.
 4. **CI complète** — un incident ne justifie pas de court-circuiter les
    contrôles ; c'est précisément le moment où une seconde erreur coûte le plus
    cher.
 5. **Mise en production et vérification** via `/api/health`.
-6. **Report sur `develop`.**
+6. **Promotion accélérée `dev` → `staging` → `master`.**
 7. **Si données personnelles : notification CNIL sous 72 h** (DPO).
 8. **Analyse *post mortem*** sous une semaine, conclue par un **test de
    non-régression**.

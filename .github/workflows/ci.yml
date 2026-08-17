@@ -2,13 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [dev, staging]
   pull_request:
-    branches: [master]
-  workflow_dispatch:
+    branches: [dev, staging]
 
-# Les runs de PR redondants sont annulés ; ceux de master ne le sont jamais,
-# pour ne pas couper un déploiement en vol.
+# Les runs de PR redondants sont annulés. Les pushes sur staging ne le sont
+# jamais, afin de ne pas interrompre un déploiement de préproduction en vol.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -196,18 +195,19 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  deploy:
-    name: Déploiement Dokploy
+  deploy-preproduction:
+    name: Déploiement préproduction
     needs: [lint, typecheck, build, test, e2e]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    environment: preproduction
     steps:
-      - name: Déclencher le webhook Dokploy
+      - name: Déclencher le webhook Dokploy de préproduction
         env:
-          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_STAGING_WEBHOOK_URL }}
         run: |
           if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
-            echo "::error::Le secret DOKPLOY_WEBHOOK_URL n'est pas configuré."
+            echo "::error::Le secret DOKPLOY_STAGING_WEBHOOK_URL n'est pas configuré."
             exit 1
           fi
           # -sS et le passage par `env:` évitent que l'URL (qui porte le
@@ -220,7 +220,7 @@ jobs:
       - name: Résumé
         run: |
           {
-            echo "### Déploiement déclenché"
+            echo "### Déploiement de préproduction déclenché"
             echo
             echo "- Commit : \`${GITHUB_SHA::7}\`"
             echo "- Webhook Dokploy appelé avec succès."

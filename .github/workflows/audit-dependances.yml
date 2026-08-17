@@ -11,12 +11,16 @@ permissions:
 
 jobs:
   audit:
-    name: Audit web et mobile
+    name: Audit master web et mobile
     runs-on: ubuntu-latest
 
     steps:
       - name: Récupérer le dépôt
         uses: actions/checkout@v4
+        with:
+          # Les workflows planifiés s'exécutent depuis la branche par défaut
+          # (`dev`), mais seul le code de production doit être audité.
+          ref: master
 
       - name: Préparer Bun et les dépendances web
         uses: ./.github/actions/setup
