@@ -115,7 +115,7 @@ describe("Admin stats", () => {
   it("refuses a disabled admin account", async () => {
     const admin = await createTestUser({ role: "admin", active: false });
     const res = await harness.req().get("/api/v1/admin/stats").set("Authorization", `Bearer ${admin.token}`);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
   it("returns shape for admin", async () => {

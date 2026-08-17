@@ -199,8 +199,9 @@ export async function getAdminStats(filters: AdminStatsFilters): Promise<AdminSt
   const publishedConditions = [...resourceConditions, eq(resource.status, "published")];
   const interactionDimensions = dimensions(filters);
   const hasDimensions = interactionDimensions.length > 0;
+  const grainSql = sql.raw(grain === "day" ? "'day'" : "'week'");
   const bucketExpression = (column: typeof resource.createdAt | typeof user.createdAt | typeof comment.createdAt) =>
-    sql`date_trunc(${grain}, ${column})`;
+    sql`date_trunc(${grainSql}, ${column})`;
 
   const usersMetricPromise = hasDimensions
     ? db.select({ value: countDistinct(user.id) }).from(user).innerJoin(resource, eq(resource.authorId, user.id)).where(where([
