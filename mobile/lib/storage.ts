@@ -1,17 +1,11 @@
 import { Platform } from 'react-native';
+import { deletePersistedValue, persistValue, readPersistedValue } from './storage-policy';
 
 /**
- * ⚠️ Repli web : le jeton est écrit en `localStorage`, accessible à tout
- * script de la page. Sur la cible Expo web, une XSS permettrait donc de
- * l'exfiltrer. Sur iOS et Android, `expo-secure-store` est utilisé et ce
- * problème ne se pose pas.
- *
- * Correction attendue : sur web, s'appuyer sur le cookie de session
- * `httpOnly` posé par better-auth (fetch avec `credentials: "include"`) au
- * lieu de conserver un jeton porteur côté client. Ce changement touche le
- * flux d'authentification mobile et n'a pas pu être validé faute de runtime
- * Expo dans l'environnement de correction — il est laissé en l'état plutôt
- * que livré non testé.
+ * La cible Expo web conserve l'authentification uniquement dans le store
+ * Zustand en mémoire. La session n'y survit donc pas à un rechargement, ce qui
+ * est un compromis adapté à cette cible de développement et de débogage. Sur
+ * iOS et Android, les données restent chiffrées par `expo-secure-store`.
  */
 
 const TOKEN_KEY = 'auth_token';
@@ -26,48 +20,28 @@ async function getSecureStore() {
 
 export async function saveToken(token: string): Promise<void> {
   const store = await getSecureStore();
-  if (store) {
-    await store.setItemAsync(TOKEN_KEY, token);
-  } else {
-    localStorage.setItem(TOKEN_KEY, token);
-  }
+  await persistValue(store, TOKEN_KEY, token);
 }
 
 export async function getToken(): Promise<string | null> {
   const store = await getSecureStore();
-  if (store) {
-    return store.getItemAsync(TOKEN_KEY);
-  }
-  return localStorage.getItem(TOKEN_KEY);
+  return readPersistedValue(store, TOKEN_KEY);
 }
 
 export async function deleteToken(): Promise<void> {
   const store = await getSecureStore();
-  if (store) {
-    await store.deleteItemAsync(TOKEN_KEY);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
+  await deletePersistedValue(store, TOKEN_KEY);
 }
 
 export async function saveUser(user: object): Promise<void> {
   const json = JSON.stringify(user);
   const store = await getSecureStore();
-  if (store) {
-    await store.setItemAsync(USER_KEY, json);
-  } else {
-    localStorage.setItem(USER_KEY, json);
-  }
+  await persistValue(store, USER_KEY, json);
 }
 
 export async function getUser<T>(): Promise<T | null> {
   const store = await getSecureStore();
-  let json: string | null;
-  if (store) {
-    json = await store.getItemAsync(USER_KEY);
-  } else {
-    json = localStorage.getItem(USER_KEY);
-  }
+  const json = await readPersistedValue(store, USER_KEY);
   if (!json) return null;
   try {
     return JSON.parse(json) as T;
@@ -78,9 +52,5 @@ export async function getUser<T>(): Promise<T | null> {
 
 export async function deleteUser(): Promise<void> {
   const store = await getSecureStore();
-  if (store) {
-    await store.deleteItemAsync(USER_KEY);
-  } else {
-    localStorage.removeItem(USER_KEY);
-  }
+  await deletePersistedValue(store, USER_KEY);
 }

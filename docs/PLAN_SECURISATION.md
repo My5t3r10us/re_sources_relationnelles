@@ -68,7 +68,7 @@ objet compatible S3, chaîne d'intégration et infrastructure Dokploy.
 | Approche | Revue de code **boîte blanche** — accès intégral au code source |
 | Couverture | 100 % des points d'entrée : 38 routes API, 5 fichiers de Server Actions, layouts et pages à contrôle d'accès, couche d'authentification, stockage S3, client mobile |
 | Référentiel | OWASP Top 10 (2021), guides d'hygiène ANSSI, recommandations CNIL |
-| Non couvert | Test d'intrusion dynamique, audit des dépendances, configuration d'infrastructure |
+| Non couvert | Test d'intrusion dynamique et configuration d'infrastructure ; l'audit des dépendances est désormais automatisé (§5.7) |
 
 **Principe retenu.** La revue statique exhaustive a été préférée à un test
 d'intrusion ponctuel : elle trouve les défauts *structurels*, là qu'un
@@ -82,7 +82,7 @@ mise en service réelle.
 |---|---|---|
 | 🔴 Critique | 4 | 4 |
 | 🟠 Élevée | 5 | 5 |
-| 🟡 Moyenne | 8 | 7 |
+| 🟡 Moyenne | 8 | 8 |
 | 🔵 Faible / RGPD | 6 | 5 |
 
 ### La cause structurelle
@@ -115,7 +115,7 @@ pouvait s'attribuer `super_admin` (C-1).
 | A03 Injection | *Aucune* | ✅ Vérifié |
 | A04 Conception non sécurisée | C-1 (typage compile-time) | ✅ |
 | A05 Mauvaise configuration | E-5, M-5 | ✅ (CSP à durcir) |
-| A06 Composants vulnérables | *Non audité* | ⚠️ Ouvert |
+| A06 Composants vulnérables | Audit Bun et npm tous les deux jours | ✅ Automatisé |
 | A07 Défaillance d'authentification | E-3 (pas de limitation de débit) | ✅ |
 | A08 Intégrité logicielle | M-3, M-4 | ✅ |
 | A09 Journalisation insuffisante | M-7 | ✅ |
@@ -160,7 +160,7 @@ dans l'historique Git.
 | R11 | Action d'administration non imputable (M-7) | 3 | 2 | **6** 🟠 | Journalisation dans `auth_log` | ✅ |
 | R12 | Conservation illimitée des adresses IP (F-5) | 4 | 2 | **8** 🟠 | Purge automatisée à 180 jours | ✅ |
 | R13 | Impossibilité d'exercer ses droits (F-4, F-6) | 4 | 2 | **8** 🟠 | Export et suppression depuis le profil | ✅ |
-| R14 | Dépendance vulnérable exploitée | 3 | 3 | **9** 🟠 | Analyse automatique | ⚠️ **Ouvert** |
+| R14 | Dépendance vulnérable exploitée | 3 | 3 | **9** 🟠 | Analyse automatique et issue de suivi | ✅ **Traité** |
 | R15 | Bucket S3 public : lecture de fichiers privés | 3 | 4 | **12** 🔴 | Bucket privé + URL signées | ⚠️ **Ouvert** |
 | R16 | Perte de la base sans restauration possible | 2 | 4 | **8** 🟠 | Sauvegardes externalisées et testées | Voir §6 |
 | R17 | Fuite de secrets d'exploitation | 2 | 4 | **8** 🟠 | Secrets hors dépôt, rotation | ✅ |
@@ -172,8 +172,7 @@ dans l'historique Git.
    conditionne la gravité réelle de C-4 et de M-3. Un objet privé déposé par un
    citoyen est lisible de quiconque connaît ou devine son URL. **Passer le
    bucket en privé et servir les fichiers par URL signées à durée limitée.**
-2. **R14 — Dépendances.** Aucune analyse automatique aujourd'hui.
-3. **R18 — Déni de service.** La limitation de débit applicative ne remplace
+2. **R18 — Déni de service.** La limitation de débit applicative ne remplace
    pas une protection en façade.
 
 ---
@@ -360,6 +359,21 @@ refactorisation ultérieure ne la rouvre pas par inadvertance.
 | Recette | Parcours de sécurité en préproduction |
 | Exploitation | Supervision, journalisation, revue trimestrielle |
 
+### 5.7 Audit de dépendances planifié
+
+Le workflow `.github/workflows/audit-dependances.yml` s'exécute à minuit UTC
+tous les deux jours et peut aussi être lancé manuellement. Il analyse le
+lockfile Bun de l'application web avec `bun audit` et le lockfile npm de
+l'application mobile avec `npm audit`.
+
+Le seuil de traitement est fixé à la sévérité **modérée**. Chaque exécution
+publie un résumé par sévérité et conserve les rapports JSON pendant 30 jours.
+La détection d'une vulnérabilité ne fait pas échouer le run : une issue portant
+le label `securite-dependances` est créée ou complétée afin d'organiser le
+triage. Lorsque les audits reviennent propres, le workflow commente puis ferme
+l'issue ouverte. Seul un défaut d'exécution ou de production du rapport rend le
+workflow rouge.
+
 ---
 
 ## 6. Méthodologie de continuité et de reprise d'activité
@@ -503,9 +517,7 @@ poser une là où elle n'est pas requise entretient la confusion.
 | # | Risque | Criticité | Pourquoi accepté temporairement | Échéance |
 |---|---|---|---|---|
 | R15 | **Bucket S3 public** | 🔴 12 | Passer en privé impose de basculer tout l'affichage sur des URL signées — chantier à part entière. **Priorité n° 1.** | Avant mise en service |
-| R14 | Dépendances non analysées | 🟠 9 | Nécessite l'ajout d'outillage à la chaîne (hors périmètre de la version 1.0) | Version 1.1 |
 | — | CSP avec `'unsafe-inline'` | 🟡 4 | Le durcissement exige un *nonce* par requête ; le risque réel est faible, aucune XSS n'ayant été trouvée | Version 1.1 |
-| M-6 | Jeton en `localStorage` sur mobile-web | 🟡 4 | La cible native utilise `expo-secure-store` ; seule la variante web est concernée | Version 1.1 |
 | F-3 | Rôle `moderator` sans privilèges | 🟡 3 | Décision produit en attente : le rôle existe mais n'ouvre aucun droit | À arbitrer |
 | — | Absence de test d'intrusion | 🟠 6 | La revue boîte blanche exhaustive a été privilégiée ; complémentaire, non substituable | Avant mise en service |
 | — | RGAA non audité | 🟠 6 | Déclaré « non conforme » en toute transparence plutôt qu'annoncé à tort | Avant mise en service |

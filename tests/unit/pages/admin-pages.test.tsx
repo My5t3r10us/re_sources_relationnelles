@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeChain } from "../../setup/db-mock";
+import { createAdminStatsFixture } from "../../setup/admin-stats-fixture";
 
 // ─── Next.js mocks ─────────────────────────────────────────────────────────
 vi.mock("next/navigation", () => ({
@@ -17,6 +18,18 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // ─── Auth mocks ────────────────────────────────────────────────────────────
 const mockGetServerSession = vi.fn();
 vi.mock("@/lib/auth-server", () => ({ getServerSession: mockGetServerSession }));
+
+const mockGetAdminStats = vi.fn();
+vi.mock("@/lib/admin-stats", () => ({
+  ADMIN_STATS_MEDIA_TYPES: ["article", "video", "pdf", "exercise", "audio", "protocol"],
+  parseAdminStatsFilters: (values: Record<string, string | undefined>) => ({
+    period: values.period === "7d" ? "7d" : "all",
+    mediaType: "all",
+    categoryId: "all",
+    region: "all",
+  }),
+  getAdminStats: mockGetAdminStats,
+}));
 
 // ─── DB mock ───────────────────────────────────────────────────────────────
 let qIdx = 0;
@@ -73,6 +86,9 @@ vi.mock("@/app/[locale]/(admin)/admin/utilisateurs/create-user-modal", () => ({
 vi.mock("@/app/[locale]/(admin)/admin/statistiques/stats-export", () => ({
   StatsExportButton: () => <button>Export</button>,
 }));
+vi.mock("@/app/[locale]/(admin)/admin/statistiques/stats-charts", () => ({
+  StatsCharts: () => <div>Graphiques statistiques</div>,
+}));
 
 const mockAdminSession = { user: { id: "admin1", name: "Admin User", role: "admin" } };
 
@@ -81,6 +97,7 @@ beforeEach(() => {
   qData = [];
   vi.clearAllMocks();
   mockGetServerSession.mockResolvedValue(mockAdminSession);
+  mockGetAdminStats.mockResolvedValue(createAdminStatsFixture());
 });
 
 // ─── Categories admin page ──────────────────────────────────────────────────
@@ -184,44 +201,23 @@ describe("app/[locale]/(admin)/admin/signalements/page.tsx", () => {
 // ─── Statistiques admin page ────────────────────────────────────────────────
 describe("app/[locale]/(admin)/admin/statistiques/page.tsx", () => {
   it("renders with default period (all time)", async () => {
-    // 8 scalar queries + categoryStats, roleStats, mediaTypeStats, allCategories, allRegions (selectDistinct)
-    qData = [
-      [{ totalUsers: 10 }],
-      [{ totalResources: 8 }],
-      [{ totalViews: 100 }],
-      [{ pendingResources: 2 }],
-      [{ publishedResources: 6 }],
-      [{ totalReports: 3 }],
-      [{ unresolvedReports: 1 }],
-      [{ totalComments: 20 }],
-      [], // categoryStats
-      [], // roleStats
-      [], // mediaTypeStats
-      [], // allCategories
-      [], // allRegions (selectDistinct)
-    ];
     vi.resetModules();
     const { default: Page } = await import("@/app/[locale]/(admin)/admin/statistiques/page");
     const result = await Page({ searchParams: Promise.resolve({}) });
     expect(result).toBeTruthy();
+    expect(mockGetAdminStats).toHaveBeenCalledWith(expect.objectContaining({ period: "all" }));
   });
 
   it("renders with period=7d filter", async () => {
-    qData = [
-      [{ totalUsers: 5 }],
-      [{ totalResources: 3 }],
-      [{ totalViews: 50 }],
-      [{ pendingResources: 1 }],
-      [{ publishedResources: 2 }],
-      [{ totalReports: 1 }],
-      [{ unresolvedReports: 0 }],
-      [{ totalComments: 10 }],
-      [], [], [], [], [],
-    ];
+    mockGetAdminStats.mockResolvedValue(createAdminStatsFixture({
+      filters: { period: "7d", mediaType: "all", categoryId: "all", region: "all" },
+      period: { label: "7 derniers jours", start: "2026-08-10", end: "2026-08-17", grain: "day" },
+    }));
     vi.resetModules();
     const { default: Page } = await import("@/app/[locale]/(admin)/admin/statistiques/page");
     const result = await Page({ searchParams: Promise.resolve({ period: "7d" }) });
     expect(result).toBeTruthy();
+    expect(mockGetAdminStats).toHaveBeenCalledWith(expect.objectContaining({ period: "7d" }));
   });
 });
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { createAdminStatsFixture } from "../../setup/admin-stats-fixture";
 
 // ─── Next.js mocks ─────────────────────────────────────────────────────────
 const mockPush = vi.fn();
@@ -523,19 +524,7 @@ describe("stats-export.tsx", () => {
     const { StatsExportButton } = await import("@/app/[locale]/(admin)/admin/statistiques/stats-export");
     render(
       <StatsExportButton
-        stats={{
-          totalUsers: 5,
-          totalResources: 10,
-          views: 100,
-          pendingResources: 2,
-          publishedResources: 8,
-          totalReports: 2,
-          unresolvedReports: 1,
-          totalComments: 20,
-          categoryStats: [{ name: "Santé", count: 3 }],
-          roleStats: [{ role: "citizen", count: 4 }],
-          period: "all",
-        }}
+        stats={createAdminStatsFixture()}
       />,
     );
     expect(document.body).toBeTruthy();

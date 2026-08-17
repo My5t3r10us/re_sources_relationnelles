@@ -9,6 +9,13 @@ La convention et la procédure de release sont décrites dans
 
 ## [Non publié]
 
+### Corrigé
+
+- **M-6 : persistance de l'authentification mobile-web.** Le jeton et les
+  données utilisateur ne sont plus écrits dans `localStorage`. Sur Expo web,
+  la session reste uniquement en mémoire et nécessite une reconnexion après
+  rechargement ; iOS et Android continuent d'utiliser `expo-secure-store`.
+
 ## [1.0.0] — 2026-08-15
 
 Première version formellement étiquetée. Elle clôt le volet « déployer et

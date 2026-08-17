@@ -101,9 +101,20 @@ describe("Admin reports", () => {
 });
 
 describe("Admin stats", () => {
+  it("401 without auth", async () => {
+    const res = await harness.req().get("/api/v1/admin/stats");
+    expect(res.status).toBe(401);
+  });
+
   it("403 for citizen", async () => {
     const u = await createTestUser();
     const res = await harness.req().get("/api/v1/admin/stats").set("Authorization", `Bearer ${u.token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("refuses a disabled admin account", async () => {
+    const admin = await createTestUser({ role: "admin", active: false });
+    const res = await harness.req().get("/api/v1/admin/stats").set("Authorization", `Bearer ${admin.token}`);
     expect(res.status).toBe(403);
   });
 
@@ -111,9 +122,31 @@ describe("Admin stats", () => {
     const admin = await createTestUser({ role: "admin" });
     const res = await harness.req().get("/api/v1/admin/stats").set("Authorization", `Bearer ${admin.token}`);
     expect(res.status).toBe(200);
-    expect(res.body.data).toHaveProperty("resources");
-    expect(res.body.data).toHaveProperty("users");
-    expect(res.body.data).toHaveProperty("comments");
-    expect(res.body.data).toHaveProperty("reports");
+    expect(res.body.data).toHaveProperty("metrics");
+    expect(res.body.data).toHaveProperty("engagement");
+    expect(res.body.data).toHaveProperty("moderation");
+    expect(res.body.data).toHaveProperty("timeline");
+  });
+
+  it("applies media type and period filters", async () => {
+    const admin = await createTestUser({ role: "admin" });
+    const author = await createTestUser();
+    await createTestResource({ authorId: author.id, mediaType: "article" });
+    await createTestResource({ authorId: author.id, mediaType: "video" });
+
+    const res = await harness.req().get("/api/v1/admin/stats?mediaType=article&period=30d")
+      .set("Authorization", `Bearer ${admin.token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.filters).toMatchObject({ mediaType: "article", period: "30d" });
+    expect(res.body.data.metrics.resources).toBe(1);
+  });
+
+  it("ignores invalid filter values", async () => {
+    const admin = await createTestUser({ role: "admin" });
+    const res = await harness.req().get("/api/v1/admin/stats?mediaType=exe&period=tomorrow")
+      .set("Authorization", `Bearer ${admin.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.filters).toMatchObject({ mediaType: "all", period: "all" });
   });
 });

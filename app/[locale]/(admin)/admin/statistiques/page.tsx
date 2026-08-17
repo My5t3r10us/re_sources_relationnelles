@@ -1,9 +1,8 @@
 import { Card } from "@/components/ui/card";
-import { Eye, PlusCircle, Users, TrendingUp } from "lucide-react";
-import { db } from "@/db";
-import { user, resource, category, comment, report } from "@/db/schema";
-import { eq, count, sum, sql, gte, and, SQL } from "drizzle-orm";
+import { getAdminStats, parseAdminStatsFilters, ADMIN_STATS_MEDIA_TYPES, type AdminStatsFilters } from "@/lib/admin-stats";
+import { Bookmark, CheckCircle2, Clock3, Eye, Flag, Heart, MessageCircle, PlusCircle, Users } from "lucide-react";
 import Link from "next/link";
+import { StatsCharts } from "./stats-charts";
 import { StatsExportButton } from "./stats-export";
 
 interface PageProps {
@@ -15,386 +14,206 @@ interface PageProps {
   }>;
 }
 
-const VALID_MEDIA_TYPES = ["article", "video", "pdf", "exercise", "audio", "protocol"] as const;
+const PERIODS = [
+  ["all", "Toutes les données"],
+  ["7d", "7 jours"],
+  ["30d", "30 jours"],
+  ["90d", "90 jours"],
+  ["12m", "12 mois"],
+] as const;
 
-function getPeriodStart(period: string): Date | null {
-  const now = new Date();
-  switch (period) {
-    case "7d":
-      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    case "30d":
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    case "90d":
-      return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    default:
-      return null;
-  }
+const MEDIA_LABELS: Record<string, string> = {
+  article: "Articles",
+  video: "Vidéos",
+  pdf: "PDF",
+  exercise: "Exercices",
+  audio: "Audio",
+  protocol: "Protocoles",
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  citizen: "Citoyens",
+  moderator: "Modérateurs",
+  admin: "Administrateurs",
+  super_admin: "Super-administrateurs",
+};
+
+function filterUrl(filters: AdminStatsFilters, overrides: Partial<AdminStatsFilters>) {
+  const merged = { ...filters, ...overrides };
+  const query = new URLSearchParams();
+  if (merged.period !== "all") query.set("period", merged.period);
+  if (merged.mediaType !== "all") query.set("mediaType", merged.mediaType);
+  if (merged.categoryId !== "all") query.set("categoryId", merged.categoryId);
+  if (merged.region !== "all") query.set("region", merged.region);
+  return `/admin/statistiques${query.size ? `?${query}` : ""}`;
+}
+
+function FilterLink({ active, href, children }: { active: boolean; href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+        active ? "bg-primary text-on-primary-fixed" : "text-on-surface-variant hover:bg-surface-container-high"
+      }`}
+    >
+      {children}
+    </Link>
+  );
 }
 
 export default async function StatistiquesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const period = params.period ?? "all";
-  const selectedMediaType = params.mediaType ?? "all";
-  const selectedCategoryId = params.categoryId ?? "all";
-  const selectedRegion = params.region ?? "all";
-  const periodStart = getPeriodStart(period);
-
-  // Build dynamic resource WHERE conditions
-  const resourceConditions: SQL[] = [];
-  if (periodStart) resourceConditions.push(gte(resource.createdAt, periodStart));
-  if (selectedMediaType !== "all" && VALID_MEDIA_TYPES.includes(selectedMediaType as typeof VALID_MEDIA_TYPES[number])) {
-    resourceConditions.push(eq(resource.mediaType, selectedMediaType as typeof VALID_MEDIA_TYPES[number]));
-  }
-  if (selectedCategoryId !== "all") {
-    resourceConditions.push(eq(resource.categoryId, selectedCategoryId));
-  }
-  if (selectedRegion !== "all") {
-    resourceConditions.push(eq(resource.region, selectedRegion));
-  }
-
-  const resourceWhere = resourceConditions.length > 0 ? and(...resourceConditions) : undefined;
-  const userWhere = periodStart ? gte(user.createdAt, periodStart) : undefined;
-  const commentWhere = periodStart ? gte(comment.createdAt, periodStart) : undefined;
-
-  const publishedConditions: SQL[] = [eq(resource.status, "published"), ...resourceConditions];
-  const publishedWhere = and(...publishedConditions);
-  const pendingConditions: SQL[] = [eq(resource.status, "pending"), ...resourceConditions];
-  const pendingWhere = and(...pendingConditions);
-
-  const [
-    [{ totalUsers }],
-    [{ totalResources }],
-    [{ totalViews }],
-    [{ pendingResources }],
-    [{ publishedResources }],
-    [{ totalReports }],
-    [{ unresolvedReports }],
-    [{ totalComments }],
-    categoryStats,
-    roleStats,
-    mediaTypeStats,
-    allCategories,
-    allRegions,
-  ] = await Promise.all([
-    db.select({ totalUsers: count() }).from(user).where(userWhere),
-    db.select({ totalResources: count() }).from(resource).where(resourceWhere),
-    db.select({ totalViews: sum(resource.viewCount) }).from(resource).where(resourceWhere),
-    db.select({ pendingResources: count() }).from(resource).where(pendingWhere),
-    db.select({ publishedResources: count() }).from(resource).where(publishedWhere),
-    db.select({ totalReports: count() }).from(report),
-    db.select({ unresolvedReports: count() }).from(report).where(eq(report.resolved, false)),
-    db.select({ totalComments: count() }).from(comment).where(commentWhere),
-    db
-      .select({ name: category.name, count: count() })
-      .from(resource)
-      .innerJoin(category, eq(resource.categoryId, category.id))
-      .where(publishedWhere)
-      .groupBy(category.name)
-      .orderBy(sql`count(*) desc`),
-    db.select({ role: user.role, count: count() }).from(user).groupBy(user.role),
-    db
-      .select({ mediaType: resource.mediaType, count: count() })
-      .from(resource)
-      .where(publishedWhere)
-      .groupBy(resource.mediaType)
-      .orderBy(sql`count(*) desc`),
-    db.select({ id: category.id, name: category.name }).from(category).orderBy(category.name),
-    db
-      .selectDistinct({ region: resource.region })
-      .from(resource)
-      .where(sql`${resource.region} IS NOT NULL AND ${resource.region} != ''`)
-      .orderBy(resource.region),
-  ]);
-
-  const views = Number(totalViews) || 0;
-  const maxCategoryStat = categoryStats.length > 0 ? Math.max(...categoryStats.map((c) => c.count)) : 1;
-  const maxMediaTypeStat = mediaTypeStats.length > 0 ? Math.max(...mediaTypeStats.map((m) => m.count)) : 1;
+  const filters = parseAdminStatsFilters(params);
+  const stats = await getAdminStats(filters);
+  const format = new Intl.NumberFormat("fr-FR");
 
   const metrics = [
-    {
-      label: "Consultations totales",
-      value: views.toLocaleString("fr-FR"),
-      trend: `${publishedResources} ressources publiées`,
-      icon: <Eye className="w-5 h-5 text-primary" />,
-      trendUp: true,
-    },
-    {
-      label: "Ressources créées",
-      value: totalResources.toLocaleString("fr-FR"),
-      trend: `${pendingResources} en attente de modération`,
-      icon: <PlusCircle className="w-5 h-5 text-primary" />,
-      trendUp: pendingResources > 0,
-    },
-    {
-      label: "Utilisateurs inscrits",
-      value: totalUsers.toLocaleString("fr-FR"),
-      trend: roleStats.map((r) => `${r.count} ${r.role}`).join(", "),
-      icon: <Users className="w-5 h-5 text-primary" />,
-      trendUp: false,
-    },
+    { label: "Consultations", value: stats.metrics.views, detail: `${stats.metrics.publishedResources} publiées`, icon: Eye },
+    { label: "Ressources", value: stats.metrics.resources, detail: `${stats.metrics.pendingResources} en attente`, icon: PlusCircle },
+    { label: "Utilisateurs", value: stats.metrics.users, detail: stats.byRole.map((item) => `${item.count} ${ROLE_LABELS[item.role] ?? item.role}`).join(", ") || "Aucun compte", icon: Users },
+    { label: "Commentaires", value: stats.metrics.comments, detail: `${stats.moderation.hiddenComments} masqués`, icon: MessageCircle },
   ];
 
-  const periodLabels: Record<string, string> = {
-    all: "Toutes les données",
-    "7d": "7 derniers jours",
-    "30d": "30 derniers jours",
-    "90d": "90 derniers jours",
-  };
-
-  const mediaTypeLabels: Record<string, string> = {
-    article: "Articles",
-    video: "Vidéos",
-    pdf: "PDFs",
-    exercise: "Exercices",
-    audio: "Audio",
-    protocol: "Protocoles",
-  };
-
-  const statsData = {
-    totalUsers,
-    totalResources,
-    views,
-    pendingResources,
-    publishedResources,
-    totalReports,
-    unresolvedReports,
-    totalComments,
-    categoryStats,
-    roleStats,
-    period,
-  };
-
-  function buildFilterUrl(overrides: Record<string, string>) {
-    const p = new URLSearchParams();
-    const current = { period, mediaType: selectedMediaType, categoryId: selectedCategoryId, region: selectedRegion };
-    const merged = { ...current, ...overrides };
-    Object.entries(merged).forEach(([k, v]) => { if (v !== "all") p.set(k, v); });
-    const qs = p.toString();
-    return `/admin/statistiques${qs ? `?${qs}` : ""}`;
-  }
-
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-10">
+      <header className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-display-lg text-on-surface">Statistiques globales</h1>
           <p className="text-lg text-on-surface-variant max-w-2xl">
-            Vue d&apos;ensemble de la santé de la plateforme.
+            Activité, engagement et qualité de service sur {stats.period.label.toLowerCase()}.
           </p>
         </div>
-        <StatsExportButton stats={statsData} />
-      </div>
+        <StatsExportButton stats={stats} />
+      </header>
 
-      {/* Filters */}
-      <div className="bg-surface-container-low rounded-2xl p-4 mb-8 space-y-3">
-        {/* Period filter */}
+      <nav aria-label="Filtres statistiques" className="bg-surface-container-low rounded-lg p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-on-surface-variant w-28">Période :</span>
-          {(["all", "7d", "30d", "90d"] as const).map((p) => (
-            <Link
-              key={p}
-              href={buildFilterUrl({ period: p })}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                period === p
-                  ? "bg-primary text-on-primary-fixed"
-                  : "text-on-surface-variant hover:bg-surface-container-high"
-              }`}
-            >
-              {periodLabels[p]}
-            </Link>
+          {PERIODS.map(([value, label]) => (
+            <FilterLink key={value} active={filters.period === value} href={filterUrl(filters, { period: value })}>{label}</FilterLink>
           ))}
         </div>
-
-        {/* Media type filter */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-on-surface-variant w-28">Type de ressource :</span>
-          <Link
-            href={buildFilterUrl({ mediaType: "all" })}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              selectedMediaType === "all"
-                ? "bg-secondary text-on-secondary-fixed"
-                : "text-on-surface-variant hover:bg-surface-container-high"
-            }`}
-          >
-            Tous
-          </Link>
-          {VALID_MEDIA_TYPES.map((mt) => (
-            <Link
-              key={mt}
-              href={buildFilterUrl({ mediaType: mt })}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                selectedMediaType === mt
-                  ? "bg-secondary text-on-secondary-fixed"
-                  : "text-on-surface-variant hover:bg-surface-container-high"
-              }`}
-            >
-              {mediaTypeLabels[mt]}
-            </Link>
+          <span className="text-sm text-on-surface-variant w-28">Type :</span>
+          <FilterLink active={filters.mediaType === "all"} href={filterUrl(filters, { mediaType: "all" })}>Tous</FilterLink>
+          {ADMIN_STATS_MEDIA_TYPES.map((value) => (
+            <FilterLink key={value} active={filters.mediaType === value} href={filterUrl(filters, { mediaType: value })}>{MEDIA_LABELS[value]}</FilterLink>
           ))}
         </div>
-
-        {/* Category filter */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-on-surface-variant w-28">Catégorie :</span>
-          <Link
-            href={buildFilterUrl({ categoryId: "all" })}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              selectedCategoryId === "all"
-                ? "bg-tertiary/20 text-tertiary"
-                : "text-on-surface-variant hover:bg-surface-container-high"
-            }`}
-          >
-            Toutes
-          </Link>
-          {allCategories.map((cat) => (
-            <Link
-              key={cat.id}
-              href={buildFilterUrl({ categoryId: cat.id })}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                selectedCategoryId === cat.id
-                  ? "bg-tertiary/20 text-tertiary"
-                  : "text-on-surface-variant hover:bg-surface-container-high"
-              }`}
-            >
-              {cat.name}
-            </Link>
+          <FilterLink active={filters.categoryId === "all"} href={filterUrl(filters, { categoryId: "all" })}>Toutes</FilterLink>
+          {stats.options.categories.map((item) => (
+            <FilterLink key={item.id} active={filters.categoryId === item.id} href={filterUrl(filters, { categoryId: item.id })}>{item.name}</FilterLink>
           ))}
         </div>
-
-        {/* Region filter */}
-        {allRegions.length > 0 && (
+        {stats.options.regions.length > 0 ? (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-on-surface-variant w-28">Zone géographique :</span>
-            <Link
-              href={buildFilterUrl({ region: "all" })}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                selectedRegion === "all"
-                  ? "bg-surface-container-highest text-on-surface"
-                  : "text-on-surface-variant hover:bg-surface-container-high"
-              }`}
-            >
-              Toutes
-            </Link>
-            {allRegions.map((r) => r.region && (
-              <Link
-                key={r.region}
-                href={buildFilterUrl({ region: r.region })}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  selectedRegion === r.region
-                    ? "bg-surface-container-highest text-on-surface"
-                    : "text-on-surface-variant hover:bg-surface-container-high"
-                }`}
-              >
-                {r.region}
-              </Link>
+            <span className="text-sm text-on-surface-variant w-28">Région :</span>
+            <FilterLink active={filters.region === "all"} href={filterUrl(filters, { region: "all" })}>Toutes</FilterLink>
+            {stats.options.regions.map((region) => (
+              <FilterLink key={region} active={filters.region === region} href={filterUrl(filters, { region })}>{region}</FilterLink>
             ))}
           </div>
-        )}
-      </div>
+        ) : null}
+      </nav>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {metrics.map((metric) => (
-          <Card key={metric.label} className="p-6 relative overflow-hidden">
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-xl" />
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-label-md text-on-surface-variant">{metric.label}</span>
-              {metric.icon}
-            </div>
-            <p className="text-4xl font-bold text-on-surface mb-2">{metric.value}</p>
-            <p className={`text-sm flex items-center gap-1 ${metric.trendUp ? "text-tertiary" : "text-on-surface-variant"}`}>
-              {metric.trendUp && <TrendingUp className="w-4 h-4" />}
-              {metric.trend}
-            </p>
-          </Card>
-        ))}
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-10">
-        <Card className="md:col-span-3 p-6">
-          <h2 className="text-headline-md text-on-surface mb-6">Résumé de la plateforme</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="bg-surface-container-low rounded-xl p-4">
-              <p className="text-sm text-on-surface-variant mb-1">Commentaires</p>
-              <p className="text-2xl font-bold text-on-surface">{totalComments}</p>
-            </div>
-            <div className="bg-surface-container-low rounded-xl p-4">
-              <p className="text-sm text-on-surface-variant mb-1">Signalements</p>
-              <p className="text-2xl font-bold text-on-surface">{totalReports}</p>
-              {unresolvedReports > 0 && (
-                <p className="text-xs text-error mt-1">{unresolvedReports} non résolus</p>
-              )}
-            </div>
-            <div className="bg-surface-container-low rounded-xl p-4">
-              <p className="text-sm text-on-surface-variant mb-1">Publiées</p>
-              <p className="text-2xl font-bold text-tertiary">{publishedResources}</p>
-            </div>
-            <div className="bg-surface-container-low rounded-xl p-4">
-              <p className="text-sm text-on-surface-variant mb-1">En attente</p>
-              <p className="text-2xl font-bold text-on-surface">{pendingResources}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="md:col-span-2 p-6">
-          <h2 className="text-headline-md text-on-surface mb-2">Ressources par catégorie</h2>
-          <p className="text-sm text-on-surface-variant mb-6">Répartition des ressources publiées.</p>
-          <div className="space-y-4">
-            {categoryStats.length === 0 ? (
-              <p className="text-sm text-on-surface-variant">Aucune ressource publiée.</p>
-            ) : (
-              categoryStats.map((cat) => {
-                const pct = Math.round((cat.count / maxCategoryStat) * 100);
-                return (
-                  <div key={cat.name}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-on-surface">{cat.name}</span>
-                      <span className="text-sm font-semibold text-on-surface">{cat.count}</span>
-                    </div>
-                    <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${pct > 60 ? "bg-primary" : pct > 30 ? "bg-tertiary" : "bg-secondary"}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* Media type breakdown */}
-      <Card className="p-6 mb-10">
-        <h2 className="text-headline-md text-on-surface mb-2">Ressources par type</h2>
-        <p className="text-sm text-on-surface-variant mb-6">Répartition par format de ressource publiée.</p>
-        <div className="space-y-4">
-          {mediaTypeStats.length === 0 ? (
-            <p className="text-sm text-on-surface-variant">Aucune ressource publiée.</p>
-          ) : (
-            mediaTypeStats.map((mt) => {
-              const pct = Math.round((mt.count / maxMediaTypeStat) * 100);
-              return (
-                <div key={mt.mediaType}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-on-surface">{mediaTypeLabels[mt.mediaType] ?? mt.mediaType}</span>
-                    <span className="text-sm font-semibold text-on-surface">{mt.count}</span>
-                  </div>
-                  <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-secondary"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })
-          )}
+      <section aria-labelledby="indicateurs-title">
+        <h2 id="indicateurs-title" className="text-headline-md text-on-surface mb-4">Indicateurs clés</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {metrics.map(({ label, value, detail, icon: Icon }) => (
+            <Card key={label} className="!rounded-lg p-5 min-h-36">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-label-md text-on-surface-variant">{label}</span>
+                <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
+              </div>
+              <p className="text-3xl font-bold text-on-surface">{format.format(value)}</p>
+              <p className="text-sm text-on-surface-variant mt-2 line-clamp-2">{detail}</p>
+            </Card>
+          ))}
         </div>
-      </Card>
+      </section>
+
+      <div>
+        <h2 id="evolution-section-title" className="text-headline-md text-on-surface mb-4">Évolution temporelle</h2>
+        <StatsCharts stats={stats} />
+      </div>
+
+      <section aria-labelledby="engagement-title">
+        <h2 id="engagement-title" className="text-headline-md text-on-surface mb-4">Engagement et progression</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {[
+            { label: "Favoris", value: stats.engagement.favorites, icon: Heart },
+            { label: "Ressources exploitées", value: stats.engagement.completions, icon: CheckCircle2 },
+            { label: "Mises de côté", value: stats.engagement.savedResources, icon: Bookmark },
+            { label: "Taux d'exploitation", value: `${stats.engagement.completionRate.toLocaleString("fr-FR")} %`, icon: CheckCircle2 },
+          ].map(({ label, value, icon: Icon }) => (
+            <Card key={label} className="!rounded-lg p-5 min-h-28">
+              <Icon className="w-5 h-5 text-tertiary mb-3" aria-hidden="true" />
+              <p className="text-sm text-on-surface-variant">{label}</p>
+              <p className="text-2xl font-bold text-on-surface mt-1">{typeof value === "number" ? format.format(value) : value}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="moderation-title">
+        <h2 id="moderation-title" className="text-headline-md text-on-surface mb-4">Modération</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <Card className="!rounded-lg p-5"><Clock3 className="w-5 h-5 text-primary mb-3" /><p className="text-sm text-on-surface-variant">Délai moyen de publication</p><p className="text-2xl font-bold text-on-surface mt-1">{stats.moderation.averagePublicationHours.toLocaleString("fr-FR")} h</p></Card>
+          <Card className="!rounded-lg p-5"><MessageCircle className="w-5 h-5 text-secondary mb-3" /><p className="text-sm text-on-surface-variant">Commentaires masqués</p><p className="text-2xl font-bold text-on-surface mt-1">{format.format(stats.moderation.hiddenComments)}</p></Card>
+          <Card className="!rounded-lg p-5"><Flag className="w-5 h-5 text-error mb-3" /><p className="text-sm text-on-surface-variant">Signalements ouverts</p><p className="text-2xl font-bold text-on-surface mt-1">{format.format(stats.metrics.unresolvedReports)}</p></Card>
+          <Card className="!rounded-lg p-5"><CheckCircle2 className="w-5 h-5 text-tertiary mb-3" /><p className="text-sm text-on-surface-variant">Part résolue</p><p className="text-2xl font-bold text-on-surface mt-1">{stats.moderation.resolvedShare.toLocaleString("fr-FR")} %</p></Card>
+        </div>
+      </section>
+
+      <section aria-labelledby="tops-title">
+        <h2 id="tops-title" className="text-headline-md text-on-surface mb-4">Top contenus et contributeurs</h2>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <Ranking title="Les plus consultées" rows={stats.topViewed} empty="Aucune consultation." />
+          <Ranking title="Les plus ajoutées aux favoris" rows={stats.topFavorited} empty="Aucun favori." />
+          <div className="bg-surface-container-lowest shadow-ambient-sm rounded-lg p-5">
+            <h3 className="text-title-md text-on-surface mb-4">Contributeurs les plus actifs</h3>
+            {stats.contributors.length > 0 ? (
+              <ol className="space-y-3">
+                {stats.contributors.map((item, index) => (
+                  <li key={item.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-on-surface min-w-0 truncate">{index + 1}. {item.name}</span>
+                    <span className="font-semibold text-primary shrink-0">{format.format(item.count)}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : <p className="text-sm text-on-surface-variant">Aucun contributeur pour ces filtres.</p>}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Ranking({ title, rows, empty }: {
+  title: string;
+  rows: Array<{ id: string; title: string; category: string | null; author: string; count: number }>;
+  empty: string;
+}) {
+  const format = new Intl.NumberFormat("fr-FR");
+  return (
+    <div className="bg-surface-container-lowest shadow-ambient-sm rounded-lg p-5">
+      <h3 className="text-title-md text-on-surface mb-4">{title}</h3>
+      {rows.length > 0 ? (
+        <ol className="space-y-3">
+          {rows.map((item, index) => (
+            <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
+              <div className="min-w-0">
+                <p className="font-medium text-on-surface truncate">{index + 1}. {item.title}</p>
+                <p className="text-xs text-on-surface-variant truncate">{item.category ?? "Sans catégorie"} · {item.author}</p>
+              </div>
+              <span className="font-semibold text-primary shrink-0">{format.format(item.count)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : <p className="text-sm text-on-surface-variant">{empty}</p>}
     </div>
   );
 }

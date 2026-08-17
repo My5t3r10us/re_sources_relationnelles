@@ -1,0 +1,261 @@
+name: Audit des dépendances
+
+on:
+  schedule:
+    - cron: "0 0 */2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    name: Audit web et mobile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Préparer Bun et les dépendances web
+        uses: ./.github/actions/setup
+
+      - name: Auditer l'application web
+        id: audit_web
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          bun audit --json --audit-level=moderate > audit-web.json 2> audit-web.stderr.log
+          code=$?
+          test -s audit-web.json || printf '{}\n' > audit-web.json
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Préparer Node.js pour l'application mobile
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Installer les dépendances mobiles
+        working-directory: mobile
+        run: npm ci
+
+      - name: Auditer l'application mobile
+        id: audit_mobile
+        continue-on-error: true
+        shell: bash
+        working-directory: mobile
+        run: |
+          set +e
+          npm audit --json --audit-level=moderate > ../audit-mobile.json 2> ../audit-mobile.stderr.log
+          code=$?
+          test -s ../audit-mobile.json || printf '{}\n' > ../audit-mobile.json
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Produire la synthèse
+        env:
+          WEB_EXIT_CODE: ${{ steps.audit_web.outputs.exit_code }}
+          MOBILE_EXIT_CODE: ${{ steps.audit_mobile.outputs.exit_code }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const severities = ['critical', 'high', 'moderate', 'low', 'info'];
+          const labels = {
+            critical: 'Critique',
+            high: 'Élevée',
+            moderate: 'Modérée',
+            low: 'Faible',
+            info: 'Information',
+          };
+
+          function readReport(file, scope) {
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync(file, 'utf8'));
+            } catch (error) {
+              throw new Error(`Rapport ${scope} illisible : ${error.message}`);
+            }
+
+            const findings = [];
+            for (const [name, vulnerability] of Object.entries(report.vulnerabilities ?? {})) {
+              const advisories = Array.isArray(vulnerability.via)
+                ? vulnerability.via.filter((item) => typeof item === 'object' && item)
+                : [];
+              const sources = advisories.length > 0 ? advisories : [vulnerability];
+              for (const source of sources) {
+                findings.push({
+                  scope,
+                  package: vulnerability.name ?? name,
+                  severity: source.severity ?? vulnerability.severity ?? 'info',
+                  advisory: source.title ?? source.url ?? 'Avis de sécurité',
+                  fixed: typeof vulnerability.fixAvailable === 'object'
+                    ? vulnerability.fixAvailable.version ?? 'Mise à niveau disponible'
+                    : vulnerability.fixAvailable === true ? 'Mise à niveau disponible' : 'Non disponible',
+                });
+              }
+            }
+
+            const bunAdvisories = report.advisories ?? report.vulnerabilities?.advisories;
+            if (Array.isArray(bunAdvisories)) {
+              for (const advisory of bunAdvisories) {
+                findings.push({
+                  scope,
+                  package: advisory.package ?? advisory.module_name ?? advisory.name ?? 'Inconnu',
+                  severity: advisory.severity ?? 'info',
+                  advisory: advisory.title ?? advisory.url ?? 'Avis de sécurité',
+                  fixed: advisory.patched_versions ?? advisory.fixAvailable ?? 'Non disponible',
+                });
+              }
+            }
+
+            // `bun audit --json` renvoie directement `{ paquet: [avis...] }`.
+            for (const [packageName, advisories] of Object.entries(report)) {
+              if (!Array.isArray(advisories)) continue;
+              for (const advisory of advisories) {
+                if (!advisory || typeof advisory !== 'object') continue;
+                findings.push({
+                  scope,
+                  package: packageName,
+                  severity: advisory.severity ?? 'info',
+                  advisory: advisory.title ?? advisory.url ?? 'Avis de sécurité',
+                  fixed: advisory.patched_versions ?? 'Voir l’avis de sécurité',
+                });
+              }
+            }
+            return findings;
+          }
+
+          const webCode = Number(process.env.WEB_EXIT_CODE || 0);
+          const mobileCode = Number(process.env.MOBILE_EXIT_CODE || 0);
+          if (webCode > 1 || mobileCode > 1) {
+            throw new Error(`Échec d'exécution d'un audit (web=${webCode}, mobile=${mobileCode}).`);
+          }
+
+          const findings = [
+            ...readReport('audit-web.json', 'Web'),
+            ...readReport('audit-mobile.json', 'Mobile'),
+          ];
+          const actionable = findings.filter((item) =>
+            ['moderate', 'high', 'critical'].includes(String(item.severity).toLowerCase()),
+          );
+          const counts = Object.fromEntries(severities.map((severity) => [severity, 0]));
+          for (const item of findings) {
+            const severity = String(item.severity).toLowerCase();
+            counts[severity] = (counts[severity] ?? 0) + 1;
+          }
+
+          const date = new Intl.DateTimeFormat('fr-FR', {
+            dateStyle: 'long',
+            timeZone: 'UTC',
+          }).format(new Date());
+          const lines = [
+            '# Audit de dépendances',
+            '',
+            `Rapport du ${date} (UTC). Seuil de notification : modéré.`,
+            '',
+            '| Sévérité | Nombre |',
+            '| --- | ---: |',
+            ...severities.map((severity) => `| ${labels[severity]} | ${counts[severity] ?? 0} |`),
+            '',
+          ];
+
+          if (findings.length === 0) {
+            lines.push('Aucune vulnérabilité connue détectée.', '');
+          } else {
+            lines.push(
+              '| Application | Paquet | Sévérité | Avis | Version corrigée |',
+              '| --- | --- | --- | --- | --- |',
+              ...findings.map((item) => `| ${item.scope} | ${String(item.package).replaceAll('|', '\\|')} | ${labels[String(item.severity).toLowerCase()] ?? item.severity} | ${String(item.advisory).replaceAll('|', '\\|')} | ${String(item.fixed).replaceAll('|', '\\|')} |`),
+              '',
+            );
+          }
+
+          const markdown = `${lines.join('\n')}\n`;
+          fs.writeFileSync('audit-summary.md', markdown);
+          fs.writeFileSync('audit-result.json', JSON.stringify({ count: actionable.length }, null, 2));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
+          NODE
+
+      - name: Publier le rapport
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-dependances-${{ github.run_id }}
+          path: |
+            audit-summary.md
+            audit-result.json
+            audit-web.json
+            audit-web.stderr.log
+            audit-mobile.json
+            audit-mobile.stderr.log
+          retention-days: 30
+
+      - name: Mettre à jour l'issue de sécurité
+        uses: actions/github-script@v7
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const summary = fs.readFileSync('audit-summary.md', 'utf8');
+            const { count } = JSON.parse(fs.readFileSync('audit-result.json', 'utf8'));
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const label = 'securite-dependances';
+            const runLink = `\n\n[Consulter le run et ses artefacts](${process.env.RUN_URL})`;
+
+            for (const definition of [
+              { name: label, color: 'B60205', description: 'Vulnérabilités détectées dans les dépendances' },
+              { name: 'triage', color: 'FBCA04', description: 'À qualifier et prioriser' },
+            ]) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: definition.name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({ owner, repo, ...definition });
+              }
+            }
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              labels: label,
+              per_page: 100,
+            });
+            const issue = issues.find((candidate) => !candidate.pull_request);
+
+            if (count > 0) {
+              const body = `${summary}${runLink}`;
+              if (issue) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: issue.number, body });
+              } else {
+                await github.rest.issues.create({
+                  owner,
+                  repo,
+                  title: `Audit de dépendances — ${count} vulnérabilité(s) détectée(s)`,
+                  body,
+                  labels: [label, 'triage'],
+                });
+              }
+            } else if (issue) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `L'audit de dépendances est revenu propre.${runLink}`,
+              });
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+            }

@@ -78,10 +78,51 @@ export interface Comment {
 }
 
 export interface AdminStats {
-  resources: { total: number; published: number; pending: number };
-  users: { total: number };
-  comments: { total: number };
-  reports: { pending: number };
+  filters: {
+    period: 'all' | '7d' | '30d' | '90d' | '12m';
+    mediaType: MediaType | 'all';
+    categoryId: string;
+    region: string;
+  };
+  period: { label: string; start: string; end: string; grain: 'day' | 'week' };
+  metrics: {
+    users: number;
+    resources: number;
+    views: number;
+    pendingResources: number;
+    publishedResources: number;
+    reports: number;
+    unresolvedReports: number;
+    comments: number;
+  };
+  engagement: {
+    favorites: number;
+    completions: number;
+    savedResources: number;
+    completionRate: number;
+  };
+  moderation: {
+    averagePublicationHours: number;
+    hiddenComments: number;
+    resolvedShare: number;
+    reportsByReason: { reason: string; resolved: number; unresolved: number }[];
+  };
+  timeline: {
+    date: string;
+    label: string;
+    resources: number;
+    users: number;
+    comments: number;
+    views: number;
+  }[];
+  byCategory: { name: string; count: number }[];
+  byMediaType: { mediaType: string; count: number }[];
+  byRole: { role: string; count: number }[];
+  byRegion: { region: string; resources: number; views: number }[];
+  topViewed: { id: string; title: string; category: string | null; author: string; count: number }[];
+  topFavorited: { id: string; title: string; category: string | null; author: string; count: number }[];
+  contributors: { id: string; name: string; count: number }[];
+  options: { categories: { id: string; name: string }[]; regions: string[] };
 }
 
 export interface AdminUser {

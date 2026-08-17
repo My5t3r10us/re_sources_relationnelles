@@ -1,36 +1,180 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# (RE)Sources Relationnelles
 
-## Getting Started
+Version 1.0.0
 
-First, run the development server:
+(RE)Sources Relationnelles est un projet ministériel simulé réalisé dans un cadre pédagogique. La plateforme centralise des ressources fiables autour des relations humaines et permet aux citoyens, modérateurs et administrateurs de les publier, les partager et les exploiter.
+
+## Fonctionnalités
+
+- Catalogue public et référentiel dynamique par catégorie, type de média et région.
+- Création et partage de ressources privées, partagées ou publiques.
+- Cycle de validation avec brouillons, file de modération, publication et suspension.
+- Commentaires, réponses, mentions J'aime et signalements.
+- Suivi personnel avec favoris, ressources exploitées et mises de côté.
+- Sessions collaboratives avec participants et messagerie.
+- Statistiques d'activité, d'engagement, de modération et de progression.
+- Back-office de gestion des utilisateurs, ressources, catégories et signalements.
+- Interface disponible en huit langues : français, anglais, allemand, espagnol, italien, néerlandais, polonais et portugais.
+- Droits RGPD d'effacement et de portabilité des données personnelles.
+
+## Stack technique
+
+| Périmètre | Technologies |
+| --- | --- |
+| Web | Next.js 16 avec App Router, React 19, TypeScript, Tailwind CSS 4 |
+| Données | Drizzle ORM, PostgreSQL 17 |
+| Authentification | better-auth, authentification à deux facteurs TOTP |
+| Stockage | API S3 compatible Tigris |
+| Internationalisation | next-intl |
+| Mobile | Expo, expo-router, NativeWind, Zustand |
+| Tests | Vitest, Playwright, Maestro |
+
+## Arborescence
+
+| Dossier | Rôle |
+| --- | --- |
+| `app/` | Routes, pages, layouts, actions serveur et API Next.js |
+| `components/` | Composants d'interface partagés |
+| `lib/` | Services, règles métier, sécurité et utilitaires |
+| `db/` | Schéma Drizzle, connexion et jeu de données de démonstration |
+| `migrations/` | Migrations SQL versionnées |
+| `messages/` | Traductions des huit langues prises en charge |
+| `mobile/` | Application Expo pour iOS, Android et le développement web |
+| `tests/` | Tests unitaires, API et end-to-end |
+| `docs/` | Plans de sécurité, déploiement et maintenance |
+| `design/` | Maquettes et règles visuelles du projet |
+
+## Démarrage
+
+### Prérequis
+
+- Bun 1.3.11
+- Node.js 20.9 ou supérieur
+- PostgreSQL 17
+
+### Application web
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+cp .env.example .env
+bun run db:push
+bun run db:seed
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+L'application est ensuite accessible sur `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Application mobile
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+L'application mobile possède son propre lockfile npm. Depuis `mobile/` :
 
-## Learn More
+```bash
+npm install
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+Renseigner `EXPO_PUBLIC_API_URL` dans `mobile/.env` avec l'adresse de l'API accessible depuis le simulateur ou l'appareil.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Variables d'environnement
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Les valeurs sensibles doivent rester dans les fichiers d'environnement locaux ou dans le gestionnaire de secrets de la plateforme de déploiement.
 
-## Deploy on Vercel
+| Variable | Rôle | Requise |
+| --- | --- | --- |
+| `DATABASE_URL` | Chaîne de connexion PostgreSQL | Oui |
+| `BETTER_AUTH_SECRET` | Secret de signature des sessions better-auth | Oui |
+| `BETTER_AUTH_URL` | URL de base utilisée par better-auth | Oui |
+| `NEXT_PUBLIC_APP_URL` | URL publique de l'application | Oui |
+| `AWS_ACCESS_KEY_ID` | Identifiant du stockage S3 | Pour les fichiers |
+| `AWS_SECRET_ACCESS_KEY` | Secret du stockage S3 | Pour les fichiers |
+| `AWS_BUCKET` | Nom du bucket S3 | Pour les fichiers |
+| `AWS_REGION` | Région du stockage S3 | Pour les fichiers |
+| `AWS_ENDPOINT_URL_S3` | Point d'accès de l'API S3 | Pour les fichiers |
+| `AWS_PUBLIC_URL` | URL publique des fichiers, lue à la compilation | Pour les fichiers |
+| `CRON_SECRET` | Secret protégeant les tâches planifiées internes | Oui en production |
+| `AUTH_LOG_RETENTION_DAYS` | Durée de conservation des journaux d'authentification | Non |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Comptes de démonstration
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le mot de passe commun est défini par `SEED_PASSWORD` lors de l'exécution du seed. `db/seed.ts` refuse explicitement de s'exécuter lorsque `NODE_ENV=production`.
+
+| E-mail | Rôle |
+| --- | --- |
+| `superadmin@ressources.local` | Super-administrateur |
+| `admin@ressources.local` | Administrateur |
+| `moderation1@ressources.local` | Modérateur |
+| `moderation2@ressources.local` | Modérateur |
+| `alice@ressources.local` | Citoyenne |
+| `bilal@ressources.local` | Citoyen |
+| `claire@ressources.local` | Citoyenne |
+| `david@ressources.local` | Citoyen |
+| `emma@ressources.local` | Citoyenne |
+| `farid@ressources.local` | Citoyen |
+| `gabrielle@ressources.local` | Citoyenne |
+| `hugo@ressources.local` | Citoyen désactivé |
+
+## Commandes
+
+| Usage | Commande | Description |
+| --- | --- | --- |
+| Développement | `bun run dev` | Lance Next.js en développement |
+| Production | `bun run build` | Compile l'application |
+| Production | `bun run start` | Lance l'application compilée |
+| Qualité | `bun run lint` | Vérifie les règles ESLint |
+| Qualité | `bun run typecheck` | Génère les types Next.js puis vérifie TypeScript |
+| Base | `bun run db:generate` | Génère une migration Drizzle |
+| Base | `bun run db:push` | Synchronise le schéma local |
+| Base | `bun run db:migrate` | Exécute les migrations |
+| Base | `bun run db:baseline` | Initialise la référence des migrations |
+| Base | `bun run db:purge` | Purge les données locales |
+| Base | `bun run db:studio` | Ouvre Drizzle Studio |
+| Base | `bun run db:seed` | Insère les données de démonstration |
+| Base de test | `bun run db:test:push` | Synchronise le schéma de la base de test |
+| Base de test | `bun run db:test:generate` | Génère les migrations avec l'environnement de test |
+| Base de test | `bun run db:test:studio` | Ouvre Drizzle Studio sur la base de test |
+| Tests | `bun run test` | Lance la suite Vitest |
+| Tests | `bun run test:watch` | Relance Vitest à chaque modification |
+| Tests | `bun run test:unit` | Lance les tests unitaires |
+| Tests | `bun run test:api` | Lance les tests d'API |
+| Tests | `bun run test:coverage` | Produit le rapport de couverture |
+| Tests | `bun run test:e2e` | Lance les tests Playwright |
+| Tests | `bun run test:e2e:ui` | Ouvre l'interface Playwright |
+| Tests | `bun run test:e2e:install` | Installe les navigateurs Playwright et leurs dépendances |
+
+## Tests
+
+Les tests unitaires et d'API utilisent Vitest. Les parcours web de bout en bout utilisent Playwright, tandis que les parcours mobiles sont décrits avec Maestro.
+
+```bash
+bun run test:unit
+bun run test:api
+bun run test:e2e
+
+cd mobile
+npx maestro test .maestro/flows
+```
+
+## CI/CD
+
+Le workflow `.github/workflows/ci.yml` exécute le lint, la vérification TypeScript, la compilation, les tests avec couverture et les parcours Playwright. Après leur réussite, un push sur `master` déclenche le déploiement Dokploy.
+
+Un second workflow, `.github/workflows/audit-dependances.yml`, analyse tous les deux jours les dépendances web avec Bun et mobiles avec npm. Les vulnérabilités de sévérité modérée ou supérieure sont regroupées dans une issue GitHub dédiée et le rapport reste disponible comme artefact du run.
+
+## Sécurité et RGPD
+
+L'état des contrôles techniques et des remédiations est détaillé dans [SECURITY_AUDIT.md](SECURITY_AUDIT.md). Le projet implémente notamment l'effacement de compte, la portabilité des données et une purge de rétention des journaux d'authentification.
+
+Les procédures associées sont décrites dans le [plan de sécurisation](docs/PLAN_SECURISATION.md), le [plan de déploiement](docs/PLAN_DEPLOIEMENT.md) et le [plan de gestion des versions et évolutions](docs/GESTION_VERSIONS_ET_EVOLUTIONS.md).
+
+## Documentation
+
+- [Plan de sécurisation](docs/PLAN_SECURISATION.md)
+- [Plan de déploiement](docs/PLAN_DEPLOIEMENT.md)
+- [Gestion des versions et évolutions](docs/GESTION_VERSIONS_ET_EVOLUTIONS.md)
+- [Guide de contribution](CONTRIBUTING.md)
+- [Journal des changements](CHANGELOG.md)
+- [Audit de sécurité](SECURITY_AUDIT.md)
+
+## Licence et cadre pédagogique
+
+Ce projet a été réalisé dans le cadre d'une formation. Il simule une plateforme ministérielle à des fins pédagogiques et n'est affilié à aucun ministère ni organisme public.

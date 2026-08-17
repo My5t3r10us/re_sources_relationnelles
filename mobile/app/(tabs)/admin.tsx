@@ -137,12 +137,14 @@ export default function AdminScreen() {
             <View>
               <View className="flex-row flex-wrap gap-3">
                 {[
-                  { label: 'Ressources', value: stats.resources.total, icon: 'document-text', color: '#3b82f6' },
-                  { label: 'Publiées', value: stats.resources.published, icon: 'checkmark-circle', color: '#10b981' },
-                  { label: 'En attente', value: stats.resources.pending, icon: 'time', color: '#f59e0b' },
-                  { label: 'Utilisateurs', value: stats.users.total, icon: 'people', color: '#8b5cf6' },
-                  { label: 'Commentaires', value: stats.comments.total, icon: 'chatbubbles', color: '#6b7280' },
-                  { label: 'Signalements', value: stats.reports.pending, icon: 'flag', color: '#ef4444' },
+                  { label: 'Ressources', value: stats.metrics.resources, icon: 'document-text', color: '#3b82f6' },
+                  { label: 'Publiées', value: stats.metrics.publishedResources, icon: 'checkmark-circle', color: '#10b981' },
+                  { label: 'En attente', value: stats.metrics.pendingResources, icon: 'time', color: '#f59e0b' },
+                  { label: 'Utilisateurs', value: stats.metrics.users, icon: 'people', color: '#8b5cf6' },
+                  { label: 'Commentaires', value: stats.metrics.comments, icon: 'chatbubbles', color: '#6b7280' },
+                  { label: 'Signalements', value: stats.metrics.unresolvedReports, icon: 'flag', color: '#ef4444' },
+                  { label: 'Favoris', value: stats.engagement.favorites, icon: 'heart', color: '#db2777' },
+                  { label: 'Exploitées', value: stats.engagement.completions, icon: 'ribbon', color: '#0f766e' },
                 ].map((stat) => (
                   <View key={stat.label} className="bg-white rounded-2xl p-4 border border-gray-100" style={{ width: '47%' }}>
                     <View className="flex-row items-center mb-2">

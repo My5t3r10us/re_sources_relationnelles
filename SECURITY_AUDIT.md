@@ -11,8 +11,7 @@
 > rétention du journal et pages légales. Le détail figure sous chaque constat.
 >
 > **Restent ouverts :** la décision produit sur le rôle `moderator` (F-3), le
-> durcissement de la CSP par nonce, le stockage du jeton sur la cible
-> mobile-web (M-6), et tout le volet infrastructure — **à commencer par le
+> durcissement de la CSP par nonce et tout le volet infrastructure — **à commencer par le
 > caractère public du bucket S3**.
 
 **Date :** 15 août 2026
@@ -289,9 +288,11 @@ Valeur relue en mémoire puis réécrite : les incréments concurrents s'écrase
 
 **Fichier :** `lib/auth.ts:29-30` — `"exp://*"` et `"re-sources://"`. Le joker élargit les origines acceptées au-delà du nécessaire. Acceptable en développement, à restreindre en production via une configuration dépendante de `NODE_ENV`.
 
-### M-6 — Jetons stockés en `localStorage` sur mobile-web  ⏳ *documenté, non corrigé*
+### M-6 — Jetons stockés en `localStorage` sur mobile-web  ✅ *corrigé*
 
-**Fichier :** `mobile/lib/storage.ts:14-21`. `expo-secure-store` est correctement utilisé sur iOS/Android, mais le repli web écrit le jeton en `localStorage`, accessible à tout script de la page. Sur la cible web d'Expo, une XSS permettrait l'exfiltration du jeton. Préférer un cookie `httpOnly` sur cette cible.
+**Fichier :** `mobile/lib/storage.ts`. `expo-secure-store` est correctement utilisé sur iOS/Android, mais le repli web écrivait le jeton et l'objet utilisateur en `localStorage`, accessibles à tout script de la page. Sur la cible web d'Expo, une XSS aurait permis d'exfiltrer le jeton et des données personnelles.
+
+> **Correction :** sur web, les fonctions de stockage sont désormais inertes et les getters renvoient `null`. Le jeton et l'utilisateur ne vivent que dans le store Zustand en mémoire : la surface d'exfiltration persistante est supprimée plutôt que déplacée. Cette solution n'impose aucun CORS avec credentials sur `/api/v1`. Le compromis est assumé : un rechargement de l'onglet web demande une nouvelle connexion. Le comportement iOS et Android reste inchangé avec `expo-secure-store`.
 
 ### M-7 — Aucune journalisation des actions d'administration  ✅ *corrigé*
 
@@ -368,7 +369,7 @@ Ces éléments ont été explicitement vérifiés et ne présentent pas de défa
 
 11. M-1 : schémas Zod sur les 38 routes et les Server Actions — supprime la classe de bugs à l'origine de C-1
 12. M-7 : journalisation des actions d'administration dans `auth_log`
-13. M-3, M-4, M-5, M-6 : vérification des magic bytes, incréments atomiques, restriction des origines, stockage du jeton mobile-web
+13. M-3, M-4, M-5 : vérification des magic bytes, incréments atomiques et restriction des origines
 14. F-4 à F-6 : suppression de compte, export des données, politique de rétention de `auth_log`
 
 ### Ce qui a été livré
@@ -381,6 +382,7 @@ Cinq commits sur `claude/security-audit-project-efk7gl`, un par phase :
 | Critiques | C-1, C-2, C-3, C-4 |
 | Élevés | E-1 à E-5 (+ M-3, M-4) |
 | Moyens / faibles | M-2, M-5, M-7, M-8, F-1, F-2, F-3 |
+| Mobile web | M-6 : suppression de toute persistance du jeton et des données utilisateur |
 | Tests | un test de non-régression par faille corrigée |
 
 **Vérifications :** 579 tests au vert sur 580 — le seul échec (`login > submits form and calls signIn`) est antérieur à ces travaux et sans rapport ; build de production réussi ; en-têtes de sécurité constatés sur les réponses ; proxy d'images vérifié fermé (hôte arbitraire et `169.254.169.254` → 400).
@@ -393,4 +395,4 @@ Cinq commits sur `claude/security-audit-project-efk7gl`, un par phase :
 
 ## Limites de l'audit
 
-Revue de code statique uniquement : aucune exploitation n'a été validée dynamiquement, faute d'environnement déployé. Les dépendances n'ont pas pu être auditées (`node_modules` absent du conteneur, `npm audit` non exécutable) — un scan de vulnérabilités connues sur `package-lock.json` et `bun.lock` reste à réaliser. La configuration d'infrastructure hors application (politique du bucket S3, TLS, WAF, variables d'environnement de production) sort du périmètre de cette revue et mérite un examen distinct — en particulier **le caractère public du bucket S3**, qui conditionne la gravité réelle de C-4 et M-3.
+Revue de code statique uniquement : aucune exploitation n'a été validée dynamiquement, faute d'environnement déployé. Depuis cette revue, un workflow analyse automatiquement `bun.lock` et `mobile/package-lock.json` tous les deux jours ; ses résultats sont conservés dans GitHub Actions et suivis par issue. La configuration d'infrastructure hors application (politique du bucket S3, TLS, WAF, variables d'environnement de production) sort du périmètre de cette revue et mérite un examen distinct — en particulier **le caractère public du bucket S3**, qui conditionne la gravité réelle de C-4 et M-3.
