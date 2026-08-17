@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   validate-source:
-    name: Vérifier la branche source
+    name: Verifier la branche source
     runs-on: ubuntu-latest
     steps:
       - name: Contrôler le chemin de promotion
