@@ -54,7 +54,7 @@ Quatre environnements, du poste du développeur à la production.
 | | **Développement** | **Test (CI)** | **Préproduction** | **Production** |
 |---|---|---|---|---|
 | **Rôle** | Développer une fonctionnalité | Valider chaque commit | Recette métier, répétition de la mise en production | Service rendu aux citoyens |
-| **Déclencheur** | Manuel (`bun run dev`) | Push et pull request sur `dev`/`staging` | Fusion sur `staging` | Fusion sur `master` |
+| **Déclencheur** | Manuel (`bun run dev`) | PR vers `dev`, puis push sur `dev` ou `staging` | Fusion sur `staging` | Fusion sur `master` |
 | **Hébergement** | Poste du développeur | Runner GitHub Actions éphémère | Dokploy — application dédiée | Dokploy — application dédiée |
 | **Base** | Postgres local | Postgres 17 en service conteneurisé, détruit à la fin du job | Postgres dédié, jeu de données anonymisé | Postgres dédié, sauvegardé |
 | **Bucket** | Bucket de développement | Aucun (client S3 simulé) | Bucket de préproduction | Bucket de production, **privé** |
@@ -130,8 +130,9 @@ Ce qui concerne directement le déploiement :
 
 ### Chaîne d'intégration et de déploiement
 
-La CI est définie dans `.github/workflows/ci.yml` et déclenchée à chaque push
-et pull request sur `dev` et `staging`. Elle ne s'exécute jamais sur `master`.
+La CI est définie dans `.github/workflows/ci.yml`. Elle s'exécute sur les pull
+requests vers `dev`, puis à chaque push sur `dev` et `staging`. Elle ne
+s'exécute jamais sur `master`.
 
 ```
                     ┌── lint ────────┐
