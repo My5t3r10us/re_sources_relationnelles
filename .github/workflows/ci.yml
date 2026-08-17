@@ -202,14 +202,23 @@ jobs:
     runs-on: ubuntu-latest
     environment: preproduction
     steps:
-      - name: Déclencher le webhook Dokploy de préproduction
+      - name: Vérifier la configuration Dokploy
+        id: dokploy
         env:
           DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_STAGING_WEBHOOK_URL }}
         run: |
           if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
-            echo "::error::Le secret DOKPLOY_STAGING_WEBHOOK_URL n'est pas configuré."
-            exit 1
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Le secret DOKPLOY_STAGING_WEBHOOK_URL n'est pas configuré ; déploiement ignoré."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Déclencher le webhook Dokploy de préproduction
+        if: steps.dokploy.outputs.configured == 'true'
+        env:
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_STAGING_WEBHOOK_URL }}
+        run: |
           # -sS et le passage par `env:` évitent que l'URL (qui porte le
           # refreshToken Dokploy) n'apparaisse dans les logs du run.
           curl --fail-with-body -sS -X POST \
@@ -218,6 +227,7 @@ jobs:
                "$DOKPLOY_WEBHOOK_URL"
 
       - name: Résumé
+        if: steps.dokploy.outputs.configured == 'true'
         run: |
           {
             echo "### Déploiement de préproduction déclenché"
@@ -228,4 +238,13 @@ jobs:
             echo "> Le webhook Dokploy est *fire-and-forget* : une réponse 200 signifie"
             echo "> « déploiement accepté », pas « déploiement réussi ». L'avancement et"
             echo "> les logs de build sont à suivre dans l'interface Dokploy."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Résumé de configuration
+        if: steps.dokploy.outputs.configured != 'true'
+        run: |
+          {
+            echo "### Déploiement de préproduction non déclenché"
+            echo
+            echo "Le secret environnemental \`DOKPLOY_STAGING_WEBHOOK_URL\` doit être configuré."
           } >> "$GITHUB_STEP_SUMMARY"
