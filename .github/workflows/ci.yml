@@ -4,10 +4,10 @@ on:
   push:
     branches: [dev, staging]
   pull_request:
-    branches: [dev, staging]
+    branches: [dev]
 
-# Les runs de PR redondants sont annulés. Les pushes sur staging ne le sont
-# jamais, afin de ne pas interrompre un déploiement de préproduction en vol.
+# Les runs de PR vers dev sont annulés lorsqu'un commit plus récent arrive.
+# Les pushes sur staging ne le sont jamais afin de préserver les déploiements.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
