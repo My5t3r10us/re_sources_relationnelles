@@ -117,5 +117,23 @@
   "Metadata": {
     "title": "(RE)Sources Relationnelles",
     "description": "Een collaboratief platform voor bronnen voor relationeel welzijn en geestelijke gezondheid."
+  },
+  "Feedback": {
+    "trigger": "Verbetering voorstellen",
+    "heading": "Uw feedback",
+    "typeFeature": "Idee",
+    "typeBug": "Fout",
+    "title": "Titel",
+    "titlePlaceholder": "Vat uw idee samen in één zin",
+    "description": "Beschrijving (optioneel)",
+    "descriptionPlaceholder": "Beschrijf de behoefte of de stappen die tot het probleem leiden...",
+    "privacyNotice": "Uw feedback wordt op een openbaar portaal gepubliceerd. Vermeld geen persoonsgegevens.",
+    "cancel": "Annuleren",
+    "closeLabel": "Sluiten",
+    "submit": "Verzenden",
+    "success": "Bedankt! Uw feedback is gepubliceerd.",
+    "viewPost": "Bekijk de publicatie",
+    "viewBoard": "Bekijk het portaal",
+    "error": "Verzenden is mislukt. Probeer het later opnieuw."
   }
 }

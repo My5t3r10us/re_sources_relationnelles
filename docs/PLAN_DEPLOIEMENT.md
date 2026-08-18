@@ -282,6 +282,30 @@ Cadence de deux semaines. Toute évolution part d'une issue GitHub qualifiée,
 passe par une branche dédiée, une pull request, une revue, la préproduction pour
 recette métier, puis la production.
 
+**Recueil des demandes — portail Fider.** Le bouton « Proposer une
+amélioration » du pied de page ouvre un formulaire qui publie sur un portail
+Fider auto-hébergé, sans que le citoyen quitte le site ni crée un second
+compte. Les publications y sont votées, ce qui donne au product owner une
+mesure de la demande réelle plutôt qu'une liste d'avis isolés.
+
+| Étape | Responsable | Support |
+|---|---|---|
+| Dépôt d'une idée ou d'une anomalie | Citoyen | Bouton du pied de page |
+| Tri hebdomadaire du portail | PO | Fider |
+| Qualification en issue GitHub | PO | GitHub Issues |
+| Retour de statut à l'auteur | PO | Réponse sur la publication Fider |
+
+Le portail complète le circuit de signalement de contenu, qui reste distinct :
+un signalement vise une ressource ou un commentaire et part en modération,
+une demande Fider vise le produit lui-même.
+
+**Protection.** La route `POST /api/v1/feedback` exige une session
+authentifiée et plafonne à cinq envois par heure et par compte. La clé d'API
+Fider vaut un compte collaborateur : elle reste côté serveur, et le navigateur
+ne parle jamais directement au portail. Aucune donnée personnelle n'est
+transmise à Fider — le lien entre une publication et son auteur reste dans
+`auth_log`, sous l'événement `feedback.submitted`.
+
 ### Maintenance réglementaire et de sécurité
 
 | Tâche | Fréquence | Responsable |
@@ -342,14 +366,40 @@ délai de modération.
 
 ### Supervision
 
-La sonde `GET /api/health` renvoie l'état, la version applicative, l'uptime et
-la latence de la base. Elle est délibérément non authentifiée — un
-orchestrateur n'a pas de compte — et ne divulgue ni URL de connexion ni détail
-d'erreur SQL.
+La supervision repose sur **OneUptime**, auto-hébergé au même titre que le
+reste de la plateforme : les données d'exploitation d'un service public ne
+partent pas chez un éditeur tiers.
+
+**Disponibilité.** Un moniteur HTTP interroge la sonde `GET /api/health`, qui
+renvoie l'état, la version applicative, l'uptime et la latence de la base. Elle
+est délibérément non authentifiée — un orchestrateur n'a pas de compte — et ne
+divulgue ni URL de connexion ni détail d'erreur SQL.
 
 | Fréquence | Seuil d'alerte | Destinataire |
 |---|---|---|
 | 60 s | 2 échecs consécutifs | Astreinte technique |
+
+**Traces et erreurs.** L'application émet ses traces et ses journaux en
+OpenTelemetry (OTLP/HTTP) vers OneUptime, depuis `instrumentation.ts` :
+
+| Source | Mécanisme | Ce qui est capturé |
+|---|---|---|
+| Rendu serveur, routes, Server Actions | `onRequestError` | Erreur, chemin, type de route, empreinte |
+| Rendu navigateur | `app/[locale]/error.tsx` et `app/global-error.tsx` | Message et empreinte, via une Server Action |
+| Base de données | `GET /api/health` | Indisponibilité de la base |
+| Portail de retours | `lib/fider.ts` | Refus ou indisponibilité de Fider |
+
+Le protocole est volontairement standard : remplacer OneUptime par un autre
+collecteur ne demanderait que de changer deux variables d'environnement.
+
+**Protection des données.** Ni les en-têtes ni les chaînes de requête ne sont
+transmis à la télémétrie : ils portent cookies de session et paramètres de
+recherche. Le navigateur ne parle pas directement à OneUptime — les erreurs
+passent par une Server Action — ce qui garde le jeton d'ingestion côté serveur
+et laisse la politique de sécurité de contenu inchangée.
+
+L'empreinte (`digest`) affichée sur l'écran d'erreur est la clé de rapprochement
+entre le signalement d'un citoyen au support et la trace correspondante.
 
 ### Rapports
 

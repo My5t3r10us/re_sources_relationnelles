@@ -117,5 +117,23 @@
   "Metadata": {
     "title": "(RE)Sources Relationnelles",
     "description": "Platforma współpracy zasobów dla dobrostanu relacyjnego i zdrowia psychicznego."
+  },
+  "Feedback": {
+    "trigger": "Zaproponuj ulepszenie",
+    "heading": "Twoja opinia",
+    "typeFeature": "Pomysł",
+    "typeBug": "Błąd",
+    "title": "Tytuł",
+    "titlePlaceholder": "Podsumuj swój pomysł w jednym zdaniu",
+    "description": "Opis (opcjonalnie)",
+    "descriptionPlaceholder": "Opisz potrzebę lub kroki prowadzące do problemu...",
+    "privacyNotice": "Twoja opinia jest publikowana na publicznym portalu. Nie podawaj danych osobowych.",
+    "cancel": "Anuluj",
+    "closeLabel": "Zamknij",
+    "submit": "Wyślij",
+    "success": "Dziękujemy! Twoja opinia została opublikowana.",
+    "viewPost": "Zobacz wpis",
+    "viewBoard": "Zobacz portal",
+    "error": "Wysyłanie nie powiodło się. Spróbuj ponownie później."
   }
 }

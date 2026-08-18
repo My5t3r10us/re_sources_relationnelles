@@ -117,5 +117,23 @@
   "Metadata": {
     "title": "(RE)Sources Relationnelles",
     "description": "Plateforme collaborative de ressources pour le bien-être relationnel et la santé mentale."
+  },
+  "Feedback": {
+    "trigger": "Proposer une amélioration",
+    "heading": "Votre retour",
+    "typeFeature": "Idée",
+    "typeBug": "Anomalie",
+    "title": "Titre",
+    "titlePlaceholder": "Résumez votre idée en une phrase",
+    "description": "Description (optionnel)",
+    "descriptionPlaceholder": "Décrivez le besoin ou les étapes qui mènent au problème...",
+    "privacyNotice": "Votre retour est publié sur un portail public. N'y indiquez aucune donnée personnelle.",
+    "cancel": "Annuler",
+    "closeLabel": "Fermer",
+    "submit": "Envoyer",
+    "success": "Merci ! Votre retour a bien été publié.",
+    "viewPost": "Voir la publication",
+    "viewBoard": "Voir le portail",
+    "error": "L'envoi a échoué. Réessayez plus tard."
   }
 }

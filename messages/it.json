@@ -117,5 +117,23 @@
   "Metadata": {
     "title": "(RE)Sources Relationnelles",
     "description": "Una piattaforma collaborativa di risorse per il benessere relazionale e la salute mentale."
+  },
+  "Feedback": {
+    "trigger": "Proponi un miglioramento",
+    "heading": "Il tuo riscontro",
+    "typeFeature": "Idea",
+    "typeBug": "Anomalia",
+    "title": "Titolo",
+    "titlePlaceholder": "Riassumi la tua idea in una frase",
+    "description": "Descrizione (facoltativo)",
+    "descriptionPlaceholder": "Descrivi l'esigenza o i passaggi che portano al problema...",
+    "privacyNotice": "Il tuo riscontro è pubblicato su un portale pubblico. Non inserire dati personali.",
+    "cancel": "Annulla",
+    "closeLabel": "Chiudi",
+    "submit": "Invia",
+    "success": "Grazie! Il tuo riscontro è stato pubblicato.",
+    "viewPost": "Vedi la pubblicazione",
+    "viewBoard": "Vedi il portale",
+    "error": "Invio non riuscito. Riprova più tardi."
   }
 }

@@ -1,7 +1,13 @@
 import { db } from "@/db";
 import { authLog } from "@/db/schema";
 
-export type AuditTargetType = "user" | "resource" | "comment" | "report" | "category";
+export type AuditTargetType =
+  | "user"
+  | "resource"
+  | "comment"
+  | "report"
+  | "category"
+  | "feedback";
 
 export type AuditEvent =
   | "user.role_changed"
@@ -19,7 +25,11 @@ export type AuditEvent =
   // Exercice des droits RGPD par le citoyen lui-même, et maintenance associée.
   | "user.self_deleted"
   | "user.data_exported"
-  | "authlog.purged";
+  | "authlog.purged"
+  // Retour envoyé au portail Fider. Tracé localement pour que la modération
+  // puisse remonter à l'auteur d'un abus sans exporter la moindre donnée
+  // personnelle vers le portail lui-même.
+  | "feedback.submitted";
 
 /**
  * Trace une action d'administration dans `auth_log`.

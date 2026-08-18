@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FeedbackButton } from "@/components/ui/feedback-button";
 
 const footerLinks = [
   { href: "/mentions-legales", label: "Mentions légales" },
@@ -8,6 +9,10 @@ const footerLinks = [
 ];
 
 export function Footer() {
+  // Lu côté serveur : la valeur suit l'environnement d'exécution, sans dépendre
+  // de ce qui était défini au moment de la construction de l'image.
+  const fiderBoardUrl = process.env.NEXT_PUBLIC_FIDER_URL;
+
   return (
     <footer className="bg-surface-container-low py-12 px-6 mt-auto">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
@@ -24,6 +29,7 @@ export function Footer() {
               {link.label}
             </Link>
           ))}
+          <FeedbackButton boardUrl={fiderBoardUrl} />
         </div>
       </div>
     </footer>

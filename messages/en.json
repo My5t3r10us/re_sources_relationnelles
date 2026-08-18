@@ -117,5 +117,23 @@
   "Metadata": {
     "title": "(RE)Sources Relationnelles",
     "description": "A collaborative platform for relational well-being and mental health resources."
+  },
+  "Feedback": {
+    "trigger": "Suggest an improvement",
+    "heading": "Your feedback",
+    "typeFeature": "Idea",
+    "typeBug": "Bug",
+    "title": "Title",
+    "titlePlaceholder": "Summarise your idea in one sentence",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Describe the need or the steps that lead to the problem...",
+    "privacyNotice": "Your feedback is published on a public board. Do not include any personal data.",
+    "cancel": "Cancel",
+    "closeLabel": "Close",
+    "submit": "Send",
+    "success": "Thank you! Your feedback has been published.",
+    "viewPost": "View the post",
+    "viewBoard": "View the board",
+    "error": "Sending failed. Please try again later."
   }
 }

@@ -9,6 +9,26 @@ La convention et la procédure de release sont décrites dans
 
 ## [Non publié]
 
+### Ajouté
+
+- **Bouton de retour utilisateur (Fider).** Un bouton « Proposer une
+  amélioration » dans le pied de page ouvre un formulaire permettant de déposer
+  une idée ou de signaler une anomalie sur un portail Fider auto-hébergé, sans
+  quitter le site. La soumission passe par `POST /api/v1/feedback`, qui exige
+  une session, plafonne les envois à cinq par heure et par compte, et conserve
+  la clé d'API côté serveur. Aucune donnée personnelle n'est transmise au
+  portail : le lien avec l'auteur reste dans `auth_log`. Traduit dans les huit
+  langues, et inactif tant que `NEXT_PUBLIC_FIDER_URL` n'est pas renseignée.
+- **Supervision et gestion des erreurs (OneUptime).** L'application émet ses
+  traces et ses journaux en OpenTelemetry (OTLP/HTTP) vers une instance
+  OneUptime auto-hébergée, via `instrumentation.ts`. Les erreurs serveur sont
+  capturées par `onRequestError`, les erreurs de rendu par les nouveaux écrans
+  `app/[locale]/error.tsx` et `app/global-error.tsx`, qui proposent une reprise
+  et affichent l'empreinte de rapprochement avec les journaux. Les erreurs du
+  navigateur remontent par une Server Action, ce qui laisse la politique de
+  sécurité de contenu inchangée. La télémétrie ne démarre que si
+  `ONEUPTIME_OTLP_ENDPOINT` et `ONEUPTIME_OTLP_TOKEN` sont tous deux définis.
+
 ### Corrigé
 
 - **M-6 : persistance de l'authentification mobile-web.** Le jeton et les

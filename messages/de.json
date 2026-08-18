@@ -117,5 +117,23 @@
   "Metadata": {
     "title": "(RE)Sources Relationnelles",
     "description": "Eine kollaborative Plattform für Ressourcen zum Wohlbefinden in Beziehungen und zur psychischen Gesundheit."
+  },
+  "Feedback": {
+    "trigger": "Verbesserung vorschlagen",
+    "heading": "Ihr Feedback",
+    "typeFeature": "Idee",
+    "typeBug": "Fehler",
+    "title": "Titel",
+    "titlePlaceholder": "Fassen Sie Ihre Idee in einem Satz zusammen",
+    "description": "Beschreibung (optional)",
+    "descriptionPlaceholder": "Beschreiben Sie den Bedarf oder die Schritte, die zum Problem führen...",
+    "privacyNotice": "Ihr Feedback wird auf einem öffentlichen Portal veröffentlicht. Geben Sie keine personenbezogenen Daten an.",
+    "cancel": "Abbrechen",
+    "closeLabel": "Schließen",
+    "submit": "Senden",
+    "success": "Vielen Dank! Ihr Feedback wurde veröffentlicht.",
+    "viewPost": "Beitrag ansehen",
+    "viewBoard": "Portal ansehen",
+    "error": "Das Senden ist fehlgeschlagen. Bitte später erneut versuchen."
   }
 }

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { apiSuccess, apiError } from "@/lib/api-response";
+import { captureError } from "@/lib/telemetry";
 import pkg from "@/package.json";
 
 /**
@@ -24,10 +25,10 @@ export async function GET() {
 
   try {
     await db.execute(sql`SELECT 1`);
-  } catch {
+  } catch (err) {
     // Le message d'erreur brut de `pg` contient l'hôte et l'utilisateur de la
     // base : on le journalise côté serveur, on ne le renvoie pas.
-    console.error("[health] base de données injoignable");
+    captureError(err, { source: "health", path: "/api/health" });
     return apiError(
       "UNHEALTHY",
       "Base de données injoignable",

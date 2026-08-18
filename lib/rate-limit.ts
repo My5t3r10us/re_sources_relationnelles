@@ -24,6 +24,7 @@ export interface RateLimitVerdict {
 export const RATE_LIMITS = {
   upload: { max: 20, windowSec: 3600 },
   report: { max: 10, windowSec: 3600 },
+  feedback: { max: 5, windowSec: 3600 },
   comment: { max: 20, windowSec: 600 },
   sessionJoin: { max: 30, windowSec: 600 },
   resourceCreate: { max: 20, windowSec: 3600 },

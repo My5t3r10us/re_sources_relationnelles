@@ -28,6 +28,8 @@ Version 1.0.0
 | Internationalisation | next-intl |
 | Mobile | Expo, expo-router, NativeWind, Zustand |
 | Tests | Vitest, Playwright, Maestro |
+| Retours utilisateurs | Fider (portail auto-hébergé) |
+| Supervision | OneUptime via OpenTelemetry (OTLP/HTTP) |
 
 ## Arborescence
 
@@ -93,6 +95,16 @@ Les valeurs sensibles doivent rester dans les fichiers d'environnement locaux ou
 | `AWS_PUBLIC_URL` | URL publique des fichiers, lue à la compilation | Pour les fichiers |
 | `CRON_SECRET` | Secret protégeant les tâches planifiées internes | Oui en production |
 | `AUTH_LOG_RETENTION_DAYS` | Durée de conservation des journaux d'authentification | Non |
+| `FIDER_URL` | URL de l'instance Fider, vue depuis le serveur | Pour les retours |
+| `FIDER_API_KEY` | Clé d'API Fider, strictement serveur | Pour les retours |
+| `NEXT_PUBLIC_FIDER_URL` | URL publique du portail de retours | Pour les retours |
+| `ONEUPTIME_OTLP_ENDPOINT` | Racine OTLP de l'instance OneUptime | Pour la supervision |
+| `ONEUPTIME_OTLP_TOKEN` | Jeton d'ingestion OneUptime | Pour la supervision |
+| `ONEUPTIME_SERVICE_NAME` | Nom du service dans OneUptime | Non |
+
+Les deux intégrations sont facultatives et inactives tant que leurs variables
+ne sont pas renseignées : le bouton de retour n'est alors pas affiché, et
+aucune télémétrie n'est émise.
 
 ## Seed
 
