@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "./index";
 import {
@@ -24,16 +25,70 @@ import {
 } from "./schema";
 
 /**
- * Le seed crée des comptes à mot de passe connu et vide des tables : il ne
- * doit jamais s'exécuter en production, où il ouvrirait des accès triviaux.
+ * Le seed fonctionne dans deux modes, choisis automatiquement selon
+ * l'environnement détecté.
+ *
+ * Hors production, mode « démonstration » : la base est vidée puis regarnie
+ * d'un jeu complet et déterministe — douze comptes à mot de passe commun,
+ * commentaires, favoris, signalements, sessions collaboratives.
+ *
+ * En production, mode « contenu seul ». Les comptes de démonstration
+ * ouvriraient des accès triviaux et l'effacement des tables détruirait des
+ * données réelles : le seed n'écrit donc que les catégories et les ressources
+ * éditoriales, sans rien supprimer. Ces ressources ont besoin d'un auteur —
+ * `resource.author_id` est NOT NULL — d'où la création d'un unique compte
+ * administrateur porteur, dont le mot de passe aléatoire est affiché une seule
+ * fois, à la fin de l'exécution.
  */
-if (process.env.NODE_ENV === "production") {
-  throw new Error(
-    "db/seed.ts est refusé en production : il crée des comptes de démonstration à mot de passe connu.",
-  );
+
+/**
+ * `NODE_ENV` ne suffit pas : `npx tsx` ne le positionne pas, si bien qu'un seed
+ * lancé à la main sur la base de production tomberait dans le mode
+ * démonstration et effacerait tout. Les variables des plateformes d'hébergement
+ * sont donc consultées en plus, et `SEED_MODE` permet de forcer le mode pour la
+ * préproduction, que rien ne distingue automatiquement de la production.
+ */
+function detectProduction(): boolean {
+  const forced = process.env.SEED_MODE;
+  if (forced === "production") return true;
+  if (forced === "demo") return false;
+  if (forced) {
+    throw new Error(
+      `SEED_MODE doit valoir "production" ou "demo" (reçu : "${forced}").`,
+    );
+  }
+
+  const candidates = [
+    process.env.NODE_ENV,
+    process.env.APP_ENV,
+    process.env.VERCEL_ENV,
+    process.env.RAILWAY_ENVIRONMENT_NAME,
+  ];
+  return candidates.some((value) => value === "production" || value === "prod");
 }
 
+const IS_PRODUCTION = detectProduction();
+
 const SEED_PASSWORD = process.env.SEED_PASSWORD ?? "SeedPassword123!";
+
+/** Compte porteur des ressources en production. */
+const CONTENT_ADMIN = {
+  email: process.env.SEED_ADMIN_EMAIL ?? "contenu@ressources.local",
+  firstName: "Compte",
+  lastName: "Éditorial",
+} as const;
+
+/**
+ * Mot de passe imprimé une seule fois en fin d'exécution.
+ *
+ * `randomBytes` et non le PRNG à graine fixe du seed : celui-ci est
+ * délibérément déterministe, donc reproductible par quiconque lit le fichier.
+ * Base64url sur 24 octets dépasse largement `MIN_PASSWORD_LENGTH`.
+ */
+function generatePassword(): string {
+  return randomBytes(24).toString("base64url");
+}
+
 const REFERENCE_DATE = new Date();
 REFERENCE_DATE.setUTCHours(12, 0, 0, 0);
 
@@ -282,7 +337,147 @@ async function cleanDatabase() {
   await db.delete(user);
 }
 
+/** Lignes de catégories, identiques dans les deux modes. */
+function buildCategories() {
+  return seedCategories.map(([name, slug, description, icon]) => ({
+    id: seedId("category"),
+    name,
+    slug,
+    description,
+    icon,
+  }));
+}
+
+/**
+ * Lignes de ressources éditoriales.
+ *
+ * `categoryIds` et `authorIds` sont fournis par l'appelant : en démonstration
+ * les ressources se répartissent entre les citoyens du jeu de test, en
+ * production elles appartiennent toutes au compte éditorial.
+ */
+function buildResources(categoryIds: readonly string[], authorIds: readonly string[]) {
+  return resourceTitles.map((title, index) => {
+    const createdAt = daysAgo(2 + (resourceTitles.length - 1 - index) * 2);
+    const status = index < 28
+      ? "published" as const
+      : index < 34
+        ? "pending" as const
+        : index < 37
+          ? "draft" as const
+          : index < 39
+            ? "rejected" as const
+            : "flagged" as const;
+    return {
+      id: seedId("resource"),
+      title,
+      content: index < richContents.length
+        ? richContents[index]
+        : `${shortContents[index % shortContents.length]}\n\n## Pour aller plus loin\n\nPrenez quelques minutes pour noter ce que vous souhaitez essayer et la personne que vous pourriez solliciter.`,
+      summary: `${title} : conseils, repères et mise en pratique.`,
+      mediaType: mediaTypes[index % mediaTypes.length],
+      privacy: index % 6 === 0 || index === 37 ? "private" as const : "public" as const,
+      status,
+      categoryId: categoryIds[index % categoryIds.length],
+      authorId: authorIds[index % authorIds.length],
+      readingTime: 4 + (index * 3) % 24,
+      featured: index < 5,
+      viewCount: status === "published" ? 90 + integer(0, 3_800) : integer(0, 45),
+      region: index % 7 === 0 ? null : regions[index % regions.length],
+      createdAt,
+      updatedAt: after(createdAt),
+    };
+  });
+}
+
+/**
+ * Mode production : contenu éditorial seul, sans suppression.
+ *
+ * Chaque écriture est conditionnelle, de sorte qu'une seconde exécution
+ * n'insère rien et ne duplique pas le catalogue.
+ */
+async function seedProductionContent() {
+  console.log("[seed] environnement de production détecté : contenu éditorial seul.");
+
+  const { auth } = await import("../lib/auth");
+  const [existingAdmin] = await db
+    .select()
+    .from(user)
+    .where(eq(user.email, CONTENT_ADMIN.email));
+
+  let adminId: string;
+  let generatedPassword: string | null = null;
+
+  if (existingAdmin) {
+    adminId = existingAdmin.id;
+    console.log(`[seed] compte éditorial déjà présent : ${CONTENT_ADMIN.email} (mot de passe inchangé).`);
+  } else {
+    generatedPassword = generatePassword();
+    await auth.api.signUpEmail({
+      body: {
+        email: CONTENT_ADMIN.email,
+        password: generatedPassword,
+        name: `${CONTENT_ADMIN.firstName} ${CONTENT_ADMIN.lastName}`,
+        firstName: CONTENT_ADMIN.firstName,
+        lastName: CONTENT_ADMIN.lastName,
+      },
+    });
+    const [created] = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, CONTENT_ADMIN.email));
+    if (!created) throw new Error(`Création du compte éditorial impossible : ${CONTENT_ADMIN.email}`);
+    adminId = created.id;
+    await db.update(user).set({ role: "admin", active: true }).where(eq(user.id, adminId));
+  }
+
+  // Les catégories existantes sont réutilisées par slug : `category.slug` est
+  // unique, une insertion aveugle échouerait sur une base déjà garnie.
+  const wanted = buildCategories();
+  const existingCategories = await db.select().from(category);
+  const idBySlug = new Map(existingCategories.map((row) => [row.slug, row.id]));
+  const missingCategories = wanted.filter((row) => !idBySlug.has(row.slug));
+  if (missingCategories.length > 0) {
+    await db.insert(category).values(missingCategories);
+    for (const row of missingCategories) idBySlug.set(row.slug, row.id);
+  }
+  const categoryIds = wanted.map((row) => idBySlug.get(row.slug)!);
+
+  const resources = buildResources(categoryIds, [adminId]);
+  const existingResources = await db.select({ id: resource.id }).from(resource);
+  const knownResourceIds = new Set(existingResources.map((row) => row.id));
+  const missingResources = resources.filter((row) => !knownResourceIds.has(row.id));
+  if (missingResources.length > 0) {
+    await db.insert(resource).values(missingResources);
+  }
+
+  console.table({
+    compte_editorial: existingAdmin ? "déjà existant" : "créé",
+    categories_ajoutees: missingCategories.length,
+    ressources_ajoutees: missingResources.length,
+  });
+
+  if (generatedPassword) {
+    // Seule occasion de lire ce mot de passe : il n'est stocké que haché.
+    console.log("");
+    console.log("──────────────────────────────────────────────────────────────");
+    console.log("  Compte administrateur créé pour porter les ressources");
+    console.log(`  Adresse       : ${CONTENT_ADMIN.email}`);
+    console.log(`  Mot de passe  : ${generatedPassword}`);
+    console.log("  Ce mot de passe n'est affiché qu'une fois : conservez-le,");
+    console.log("  puis changez-le après la première connexion.");
+    console.log("──────────────────────────────────────────────────────────────");
+    console.log("");
+  }
+
+  console.log("Seed de contenu terminé avec succès.");
+}
+
 async function seed() {
+  if (IS_PRODUCTION) {
+    await seedProductionContent();
+    return;
+  }
+
   console.log("Démarrage du seed déterministe...");
   await cleanDatabase();
 
@@ -318,46 +513,13 @@ async function seed() {
     .map((item) => usersByEmail.get(item[0])!)
     .filter(Boolean);
 
-  const categories = seedCategories.map(([name, slug, description, icon]) => ({
-    id: seedId("category"),
-    name,
-    slug,
-    description,
-    icon,
-  }));
+  const categories = buildCategories();
   await db.insert(category).values(categories);
 
-  const resources = resourceTitles.map((title, index) => {
-    const createdAt = daysAgo(2 + (resourceTitles.length - 1 - index) * 2);
-    const status = index < 28
-      ? "published" as const
-      : index < 34
-        ? "pending" as const
-        : index < 37
-          ? "draft" as const
-          : index < 39
-            ? "rejected" as const
-            : "flagged" as const;
-    return {
-      id: seedId("resource"),
-      title,
-      content: index < richContents.length
-        ? richContents[index]
-        : `${shortContents[index % shortContents.length]}\n\n## Pour aller plus loin\n\nPrenez quelques minutes pour noter ce que vous souhaitez essayer et la personne que vous pourriez solliciter.`,
-      summary: `${title} : conseils, repères et mise en pratique.`,
-      mediaType: mediaTypes[index % mediaTypes.length],
-      privacy: index % 6 === 0 || index === 37 ? "private" as const : "public" as const,
-      status,
-      categoryId: categories[index % categories.length].id,
-      authorId: activeCitizens[index % activeCitizens.length].id,
-      readingTime: 4 + (index * 3) % 24,
-      featured: index < 5,
-      viewCount: status === "published" ? 90 + integer(0, 3_800) : integer(0, 45),
-      region: index % 7 === 0 ? null : regions[index % regions.length],
-      createdAt,
-      updatedAt: after(createdAt),
-    };
-  });
+  const resources = buildResources(
+    categories.map((item) => item.id),
+    activeCitizens.map((item) => item.id),
+  );
   await db.insert(resource).values(resources);
 
   const comments = Array.from({ length: 60 }, (_, index) => {

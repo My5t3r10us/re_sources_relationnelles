@@ -81,7 +81,11 @@ createdb resources_prod
 # 3. Schéma — la baseline crée l'intégralité des tables
 DATABASE_URL=... bun run db:migrate
 
-# 4. Compte super-administrateur initial (hors seed de démonstration)
+# 4. Contenu éditorial initial et compte administrateur porteur.
+#    Le seed détecte la production et n'insère alors que catégories et
+#    ressources, sans rien effacer. Le mot de passe généré n'est affiché
+#    qu'une fois : le relever à cet instant.
+SEED_MODE=production DATABASE_URL=... bun run db:seed
 
 # 5. Vérification
 curl -fsS https://<hôte>/api/health

@@ -94,9 +94,29 @@ Les valeurs sensibles doivent rester dans les fichiers d'environnement locaux ou
 | `CRON_SECRET` | Secret protégeant les tâches planifiées internes | Oui en production |
 | `AUTH_LOG_RETENTION_DAYS` | Durée de conservation des journaux d'authentification | Non |
 
-## Comptes de démonstration
+## Seed
 
-Le mot de passe commun est défini par `SEED_PASSWORD` lors de l'exécution du seed. `db/seed.ts` refuse explicitement de s'exécuter lorsque `NODE_ENV=production`.
+`db/seed.ts` choisit son mode automatiquement selon l'environnement détecté
+(`NODE_ENV`, `APP_ENV`, `VERCEL_ENV`, `RAILWAY_ENVIRONMENT_NAME`). `SEED_MODE`
+force le mode, ce qui est nécessaire en préproduction : rien ne la distingue
+automatiquement de la production.
+
+| Mode | Déclenchement | Effet |
+| --- | --- | --- |
+| Démonstration | Environnement autre que production | Vide les tables, puis insère le jeu complet (12 comptes, 40 ressources, commentaires, signalements, sessions) |
+| Contenu seul | Environnement de production, ou `SEED_MODE=production` | N'efface rien : insère les 8 catégories et les 40 ressources éditoriales, plus un unique compte administrateur qui les porte |
+
+En mode contenu seul, aucun compte de démonstration n'est créé. Le compte
+éditorial (`SEED_ADMIN_EMAIL`, par défaut `contenu@ressources.local`) reçoit un
+mot de passe aléatoire affiché **une seule fois** en fin d'exécution : il n'est
+stocké que haché, donc à conserver puis à changer après la première connexion.
+Les écritures sont conditionnelles, une seconde exécution ne duplique rien et
+ne régénère pas le mot de passe.
+
+### Comptes de démonstration
+
+Créés uniquement en mode démonstration. Le mot de passe commun est défini par
+`SEED_PASSWORD`.
 
 | E-mail | Rôle |
 | --- | --- |
